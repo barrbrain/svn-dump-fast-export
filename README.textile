@@ -1,0 +1,9 @@
+h1. A tool to convert a subversion dump for input to git-fast-import
+
+This project is currently in its infancy - just the building blocks for the data-structures needed for good time and memory bounds. The inspiration comes from both git2svn.py and svn-all-fast-export. It will eventually combine some functions of both projects but hopefully with a small codebase with few dependencies.
+
+h1. License
+
+This project is distributed under a two-clause BSD style license.
+It contains a derivative of Jason Evans' hash-based treap implementation.
+The rest of the project is presently copyright David Barr.
