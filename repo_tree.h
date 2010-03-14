@@ -54,4 +54,15 @@ struct repo_commit_s {
     uint32_t root_dir_offset;
 };
 
+typedef struct repo_s repo_t;
+
+struct repo_s {
+    uint32_t num_commits;
+    uint32_t num_dirs;
+    uint32_t num_dirents;
+    repo_commit_t* commits;
+    repo_dir_t* dirs;
+    repo_dirent_t* dirents;
+}
+
 #endif

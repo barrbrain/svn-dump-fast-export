@@ -34,18 +34,21 @@
 
 #include "repo_tree.h"
 
-static repo_dir_t* repo_dir_base;
+static repo_t* repo;
+
+static repo_commit_t*
+repo_commit_by_revision_id(uint32_t rev_id) {
+    return &repo->commits[rev_id];
+}
 
 static repo_dir_t*
 repo_commit_root_dir(repo_commit_t *commit) {
-    return &repo_dir_base[commit->root_dir_offset];
+    return &repo->dirs[commit->root_dir_offset];
 }
-
-static repo_dirent_t* repo_dirent_base;
 
 static repo_dirent_t*
 repo_first_dirent(repo_dir_t* dir) {
-    return &repo_dirent_base[dir->first_offset];
+    return &repo->dirents[dir->first_offset];
 }
 
 static int
@@ -71,5 +74,27 @@ repo_dirent_is_dir(repo_dirent_t* dirent) {
 static repo_dir_t*
 repo_dir_from_dirent(repo_dirent_t* dirent) {
     if(!repo_dirent_is_dir(dirent)) return NULL;
-    return &repo_dir_base[dirent->content_offset];
+    return &repo->dirs[dirent->content_offset];
+}
+
+static uint32_t
+repo_alloc_dirents(uint32_t count) {
+    uint32_t offset = repo->num_dirents;
+    repo->num_dirents += count;
+    return offset;
+}
+
+static uint32_t
+repo_alloc_dir(uint32_t size) {
+    uint32_t offset = repo->num_dirs++;
+    repo->dirs[offset].size = size;
+    repo->dirs[offset].first_offset = repo_alloc_dirents(size);
+    return offset;
+}
+
+static uint32_t
+repo_alloc_commit(uint32_t mark) {
+    uint32_t offset = repo->num_commits++;
+    repo->commits[offset].mark = mark;
+    return offset;
 }
