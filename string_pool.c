@@ -51,7 +51,9 @@ typedef trp(node_t) tree_t;
 
 struct pool_s {
     uint32_t size;
+    uint32_t max_size;
     uint32_t entries;
+    uint32_t max_entries;
     char *data;
     node_t *index;
     tree_t tree;
@@ -83,9 +85,11 @@ pool_init(uint32_t max_size, uint32_t max_entries) {
     pool = malloc(sizeof(*pool));
     pool->data = malloc(max_size);
     pool->size = 0;
+    pool->max_size = max_size;
     pool->index = malloc(max_entries * sizeof(node_t));
     // First entry is reserved for NULL
     pool->entries = 1;
+    pool->max_entries = max_entries;
     tree_new(&pool->tree, 42);
 }
 
@@ -96,9 +100,19 @@ pool_fetch(uint32_t entry) {
 
 uint32_t
 pool_intern(char* key) {
-    node_t *node = &pool->index[pool->entries];
+    uint32_t key_len = strlen(key) + 1;
+    node_t *node = NULL;
     node_t *match = NULL;
+    if(pool->entries == pool->max_entries) {
+        pool->max_entries *= 2; 
+        pool->index = realloc(pool->index, pool->max_entries * sizeof(node_t));
+    }
+    node = &pool->index[pool->entries];
     node->offset = pool->size;
+    if(pool->size + key_len > pool->max_size) {
+        pool->max_size *= 2;
+        pool->data = realloc(pool->data, pool->max_size);
+    }
     strcpy(node_value(node), key);
     match = tree_psearch(&pool->tree, node);
     if(!match || node_value_cmp(node, match)) {
