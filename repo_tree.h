@@ -57,12 +57,18 @@ struct repo_commit_s {
 typedef struct repo_s repo_t;
 
 struct repo_s {
-    uint32_t num_commits;
-    uint32_t num_dirs;
-    uint32_t num_dirents;
     repo_commit_t* commits;
     repo_dir_t* dirs;
     repo_dirent_t* dirents;
-}
+    uint32_t num_commits;
+    uint32_t max_commits;
+    uint32_t num_dirs;
+    uint32_t max_dirs;
+    uint32_t num_dirents;
+    uint32_t max_dirents;
+};
+
+void
+repo_init(uint32_t max_commits, uint32_t max_dirs, uint32_t max_dirents);
 
 #endif

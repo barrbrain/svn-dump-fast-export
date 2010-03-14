@@ -34,7 +34,7 @@
 
 #include "repo_tree.h"
 
-static repo_t* repo;
+static repo_t *repo;
 
 static repo_commit_t*
 repo_commit_by_revision_id(uint32_t rev_id) {
@@ -80,13 +80,24 @@ repo_dir_from_dirent(repo_dirent_t* dirent) {
 static uint32_t
 repo_alloc_dirents(uint32_t count) {
     uint32_t offset = repo->num_dirents;
+    if(repo->num_dirents + count > repo->max_dirents) {
+        repo->max_dirents *= 2;
+        repo->dirents =
+          realloc(repo->dirents, repo->max_dirents * sizeof(repo_dirent_t));
+    }
     repo->num_dirents += count;
     return offset;
 }
 
 static uint32_t
 repo_alloc_dir(uint32_t size) {
-    uint32_t offset = repo->num_dirs++;
+    uint32_t offset;
+    if(repo->num_dirs == repo->max_dirs) {
+        repo->max_dirs *= 2;
+        repo->dirs =
+          realloc(repo->dirs, repo->max_dirs * sizeof(repo_dir_t));
+    }
+    offset = repo->num_dirs++;
     repo->dirs[offset].size = size;
     repo->dirs[offset].first_offset = repo_alloc_dirents(size);
     return offset;
@@ -94,7 +105,27 @@ repo_alloc_dir(uint32_t size) {
 
 static uint32_t
 repo_alloc_commit(uint32_t mark) {
-    uint32_t offset = repo->num_commits++;
+    uint32_t offset;
+    if(repo->num_commits > repo->max_commits) {
+        repo->max_commits *= 2;
+        repo->commits =
+          realloc(repo->commits, repo->max_commits * sizeof(repo_commit_t));
+    }
+    offset = repo->num_commits++;
     repo->commits[offset].mark = mark;
     return offset;
+}
+
+void
+repo_init(uint32_t max_commits, uint32_t max_dirs, uint32_t max_dirents) {
+    repo = (repo_t*)malloc(sizeof(repo_t));
+    repo->commits = malloc(max_commits * sizeof(repo_commit_t));
+    repo->dirs = malloc(max_dirs * sizeof(repo_dir_t));
+    repo->dirents = malloc(max_dirents * sizeof(repo_dirent_t));
+    repo->num_commits = 0;
+    repo->max_commits = max_commits;
+    repo->num_dirs = 0;
+    repo->max_dirs = max_dirs;
+    repo->num_dirents = 0;
+    repo->max_dirents = max_dirents;
 }
