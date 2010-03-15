@@ -32,7 +32,7 @@ int main(int argc, char **argv)
                 printf("%d", pool_intern(a3));
             }
             printf("\"\n");
-        } else if (!strcmp(cmd, "modify") || !strcmp(cmd, "delete")) {
+        } else if (!strcmp(cmd, "add") || !strcmp(cmd, "modify") || !strcmp(cmd, "delete")) {
             a1 = strtok(NULL, "\"");
             strtok(NULL, "\"");
             printf("%s \"", cmd);
