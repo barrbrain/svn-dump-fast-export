@@ -138,59 +138,71 @@ repo_clone_dir(repo_dir_t* orig_dir) {
     return NULL;
 }
 
+static repo_dirent_t*
+repo_read_dirent(uint32_t revision, char* path) {
+    char *ctx;
+    uint32_t name;
+    repo_dir_t* dir;
+    repo_dirent_t* dirent;
+    dir = repo_commit_root_dir(repo_commit_by_revision_id(revision));
+    for(name = pool_tok_r(path, "/", &ctx);
+        name; name = pool_tok_r(NULL, "/", &ctx)) {
+        dirent = repo_dirent_by_name(dir, name);
+        if(repo_dirent_is_dir(dirent)) {
+            dir = repo_dir_from_dirent(dirent);
+        } else {
+            break;
+        }
+    }
+    return name ? NULL : dirent;
+}
+
+static void
+repo_write_dirent(char* path, uint32_t mode, uint32_t content_offset) {
+    char *ctx;
+    uint32_t name, revision;
+    repo_dir_t* dir;
+    repo_dirent_t* dirent;
+    revision = repo->active_commit;
+    dir = repo_commit_root_dir(repo_commit_by_revision_id(revision));
+    dir = repo_clone_dir(dir);
+    for(name = pool_tok_r(path, "/", &ctx);
+        name; name = pool_tok_r(NULL, "/", &ctx)) {
+        dirent = repo_dirent_by_name(dir, name);
+        if(dirent == NULL) {
+            /* Add entry to dir */
+        } else if(repo_dirent_is_dir(dirent)) {
+            dir = repo_dir_from_dirent(dirent);
+            dir = repo_clone_dir(dir);
+        } else {
+            /* Allocate new directory */
+            dirent->mode = 0;
+            dirent->content_offset = 0;
+        }
+    }
+    dirent->mode = mode;
+    dirent->content_offset = content_offset;
+}
+
 void
 repo_copy(uint32_t revision, char* src, char* dst) {
-    char *ctx;
-    repo_dir_t *src_dir, *dst_dir;
-    repo_dirent_t *src_dirent, *dst_dirent;
-    repo_dirent_t src_value;
-    uint32_t src_name;
-    uint32_t dst_name;
+    repo_dirent_t *src_dirent;
     printf("C %d:%s %s\n", revision, src, dst);
-    src_dir = repo_commit_root_dir(repo_commit_by_revision_id(revision));
-    for(src_name = pool_tok_r(src, "/", &ctx);
-        src_name; src_name = pool_tok_r(NULL, "/", &ctx)) {
-        src_dirent = repo_dirent_by_name(src_dir, src_name);
-        if(repo_dirent_is_dir(src_dirent)) {
-            src_dir = repo_dir_from_dirent(src_dirent);
-        } else {
-            break;
-        }
-    }
-    if(src_name) {
-        /* Could not follow complete source path. */
-        return;
-    }
-    src_value = *src_dirent;
-    dst_dir = repo_clone_dir(repo_commit_root_dir(
-        repo_commit_by_revision_id(repo->active_commit)));
-    for(dst_name = pool_tok_r(dst, "/", &ctx);
-        dst_name; dst_name = pool_tok_r(NULL, "/", &ctx)) {
-        /* Walk tree and allocate new nodes if necessary. */
-        dst_dirent = repo_dirent_by_name(dst_dir, dst_name);
-        if(repo_dirent_is_dir(dst_dirent)) {
-            dst_dir = repo_clone_dir(
-                repo_dir_from_dirent(dst_dirent));
-        } else {
-            break;
-        }
-    }
-    if(dst_name) {
-        /* Could not follow complete destination path. */
-        return;
-    }
-    dst_dirent->mode = src_value.mode;
-    dst_dirent->content_offset = src_value.content_offset;
+    src_dirent = repo_read_dirent(revision, src);
+    if(src_dirent == NULL) return;
+    repo_write_dirent(dst, src_dirent->mode, src_dirent->content_offset);
 }
 
 void
 repo_add(char* path, uint32_t blob_mark) {
     printf("A %s %d\n", path, blob_mark);
+    repo_write_dirent(path, 0, blob_mark);
 }
 
 void
 repo_modify(char* path, uint32_t blob_mark) {
     printf("M %s %d\n", path, blob_mark);
+    repo_write_dirent(path, 0, blob_mark);
 }
 
 void
