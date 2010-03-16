@@ -165,16 +165,32 @@ repo_clone_dir(repo_dir_t* orig_dir, uint32_t padding) {
         dirent_offset = repo_alloc_dirents(orig_dir->size + padding);
         printf("Reallocating dir clone.\n");
     }
+    printf("Copying %d entries.\n", orig_dir->size);
     memcpy(&repo->dirents[dirent_offset], repo_first_dirent(orig_dir),
         orig_dir->size * sizeof(repo_dirent_t));
     if(orig_offset >= repo->num_dirs_saved) {
-        bzero(repo_first_dirent(orig_dir),
-            orig_dir->size * sizeof(repo_dirent_t));
+       // bzero(repo_first_dirent(orig_dir),
+       //     orig_dir->size * sizeof(repo_dirent_t));
     }
-    bzero(&repo->dirents[dirent_offset + orig_dir->size],
-        padding * sizeof(repo_dirent_t));
+   // bzero(&repo->dirents[dirent_offset + orig_dir->size],
+   //     padding * sizeof(repo_dirent_t));
     repo->dirs[new_offset].size = orig_dir->size + padding; 
+    repo->dirs[new_offset].first_offset = dirent_offset;
     return &repo->dirs[new_offset];
+}
+
+static void
+repo_print_tree(uint32_t depth, repo_dir_t* dir) {
+    uint32_t i,j;
+    repo_dirent_t* dirent;
+    for(j=0;j<dir->size;j++) {
+        for(i=0;i<depth;i++) putchar(' ');
+        dirent = &repo_first_dirent(dir)[j];
+        printf("%d\n",dirent->name_offset);
+        if(repo_dirent_is_dir(dirent)) {
+            repo_print_tree(depth+1, repo_dir_from_dirent(dirent));
+        }
+    }
 }
 
 static repo_dirent_t*
@@ -197,10 +213,10 @@ repo_read_dirent(uint32_t revision, char* path) {
             return NULL;
         } else if(repo_dirent_is_dir(dirent)) {
             dir = repo_dir_from_dirent(dirent);
-            printf("dirent: %d, %o, %d\n",
+            printf("dirent: %d, %07o, %d\n",
                 dirent->name_offset, dirent->mode, dirent->content_offset);
         } else {
-            printf("Not a directory: %d, %o, %d\n",
+            printf("Not a directory: %d, %07o, %d\n",
                 dirent->name_offset, dirent->mode, dirent->content_offset);
             break;
         }
@@ -217,36 +233,53 @@ repo_write_dirent(char* path, uint32_t mode, uint32_t content_offset) {
     revision = repo->active_commit;
     dir = repo_commit_root_dir(repo_commit_by_revision_id(revision));
     dir = repo_clone_dir(dir, 0);
+    repo_commit_by_revision_id(revision)->root_dir_offset = dir - repo->dirs;
     for(name = pool_tok_r(path, "/", &ctx);
         name; name = pool_tok_r(NULL, "/", &ctx)) {
+        repo_print_tree(0, repo_commit_root_dir(repo_commit_by_revision_id(repo->active_commit)));
+        printf("dir[%d]: %d, %d\n", dir - repo->dirs, dir->size, dir->first_offset);
         printf("Descending: %d\n", (name));
         dirent = repo_dirent_by_name(dir, name);
         if(dirent == NULL) {
             /* Add entry to dir */
+            printf("Adding new entry.\n");
             dir = repo_clone_dir(dir, 1);
+            printf("dir[%d]: %d, %d\n", dir - repo->dirs, dir->size, dir->first_offset);
             dirent = &repo_first_dirent(dir)[dir->size -1];
             dirent->name_offset = name;
             dirent->mode = REPO_MODE_BLB;
             dirent->content_offset = 0;
-            printf("dirent: %d, %o, %d\n",
+            printf("dirent[%d]: %d, %06o, %d\n", dirent - repo->dirents,
                 dirent->name_offset, dirent->mode, dirent->content_offset);
+            if(*ctx /* not last name */) {
+                /* Allocate new directory */
+                printf("Populating entry with new directory.\n");
+                dirent->mode = REPO_MODE_DIR;
+                dir_offset = repo_alloc_dir(0);
+                dirent->content_offset = dir_offset;
+                dir = &repo->dirs[dir_offset];
+                printf("dirent[%d]: %d, %06o, %d\n", dirent - repo->dirents,
+                    dirent->name_offset, dirent->mode, dirent->content_offset);
+            }
             qsort(repo_first_dirent(dir), dir->size,
                 sizeof(repo_dirent_t), repo_dirent_name_cmp);
         } else if(dir = repo_dir_from_dirent(dirent)) {
             /* Clone dir for write */
-            printf("dirent: %d, %o, %d\n",
+            printf("Entering existing directory.\n");
+            printf("dirent[%d]: %d, %06o, %d\n", dirent - repo->dirents,
                 dirent->name_offset, dirent->mode, dirent->content_offset);
             dir = repo_clone_dir(dir, 0);
         } else if(*ctx /* not last name */) {
             /* Allocate new directory */
-            printf("dirent: %d, %o, %d\n",
-                dirent->name_offset, dirent->mode, dirent->content_offset);
+            printf("Overwriting entry with new directory.\n");
             dirent->mode = REPO_MODE_DIR;
             dirent_offset = dirent - repo->dirents;
-            dir_offset = repo_alloc_dir(1);
+            dir_offset = repo_alloc_dir(0);
             dirent = &repo->dirents[dirent_offset];
             dir = &repo->dirs[dir_offset];
             dirent->content_offset = dir_offset;
+            printf("dirent[%d]: %d, %06o, %d\n", dirent - repo->dirents,
+                dirent->name_offset, dirent->mode, dirent->content_offset);
         }
     }
     dirent->mode = mode;
@@ -262,23 +295,27 @@ repo_copy(uint32_t revision, char* src, char* dst) {
     src_dirent = repo_read_dirent(revision, src);
     if(src_dirent == NULL) return;
     repo_write_dirent(dst, src_dirent->mode, src_dirent->content_offset);
+    repo_print_tree(0, repo_commit_root_dir(repo_commit_by_revision_id(repo->active_commit)));
 }
 
 void
 repo_add(char* path, uint32_t blob_mark) {
     printf("A %s %d\n", path, blob_mark);
     repo_write_dirent(path, REPO_MODE_BLB, blob_mark);
+    repo_print_tree(0, repo_commit_root_dir(repo_commit_by_revision_id(repo->active_commit)));
 }
 
 void
 repo_modify(char* path, uint32_t blob_mark) {
     printf("M %s %d\n", path, blob_mark);
     repo_write_dirent(path, REPO_MODE_BLB, blob_mark);
+    repo_print_tree(0, repo_commit_root_dir(repo_commit_by_revision_id(repo->active_commit)));
 }
 
 void
 repo_delete(char* path) {
     printf("D %s\n", path);
+    repo_print_tree(0, repo_commit_root_dir(repo_commit_by_revision_id(repo->active_commit)));
 }
 
 void
