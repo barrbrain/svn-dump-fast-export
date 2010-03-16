@@ -132,6 +132,12 @@ repo_init(uint32_t max_commits, uint32_t max_dirs, uint32_t max_dirents) {
     repo->active_commit = 0;
 }
 
+static repo_dir_t*
+repo_clone_dir(repo_dir_t* orig_dir) {
+    /* TODO: implement copy-on write allocation scheme. */
+    return NULL;
+}
+
 void
 repo_copy(uint32_t revision, char* src, char* dst) {
     char *ctx;
@@ -156,11 +162,22 @@ repo_copy(uint32_t revision, char* src, char* dst) {
         return;
     }
     src_value = *src_dirent;
-    dst_dir = repo_commit_root_dir(
-        repo_commit_by_revision_id(repo->active_commit));
+    dst_dir = repo_clone_dir(repo_commit_root_dir(
+        repo_commit_by_revision_id(repo->active_commit)));
     for(dst_name = pool_tok_r(dst, "/", &ctx);
         dst_name; dst_name = pool_tok_r(NULL, "/", &ctx)) {
         /* Walk tree and allocate new nodes if necessary. */
+        dst_dirent = repo_dirent_by_name(dst_dir, dst_name);
+        if(repo_dirent_is_dir(dst_dirent)) {
+            dst_dir = repo_clone_dir(
+                repo_dir_from_dirent(dst_dirent));
+        } else {
+            break;
+        }
+    }
+    if(dst_name) {
+        /* Could not follow complete destination path. */
+        return;
     }
     dst_dirent->mode = src_value.mode;
     dst_dirent->content_offset = src_value.content_offset;
