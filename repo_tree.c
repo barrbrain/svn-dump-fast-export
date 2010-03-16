@@ -343,10 +343,13 @@ repo_gc_dir_src_cmp(const void *a, const void *b) {
 
 static repo_dir_gc_t*
 repo_gc_find_by_src(uint32_t offset) {
-    repo_dir_gc_t key;
-    key.offset = offset;
-    return bsearch(&key, repo->gc_dirs, repo->num_gc_dirs,
-        sizeof(repo_dir_gc_t), repo_gc_dir_offset_cmp);
+    uint32_t i;
+    for(i = 0; i < repo->num_gc_dirs; i++) {
+        if(repo->gc_dirs[i].offset == offset) {
+            return &repo->gc_dirs[i];
+        }
+    }
+    return NULL;
 }
 
 static void
@@ -369,13 +372,19 @@ static void
 repo_gc_dirs(void) {
     uint32_t i;
     repo_dir_gc_t* gc_dir;
-    repo_dir_t* root = repo_commit_root_dir(
-        repo_commit_by_revision_id(repo->active_commit));
+    repo_commit_t* commit = repo_commit_by_revision_id(repo->active_commit);
+    repo_dir_t* root = repo_commit_root_dir(commit);
     repo->num_gc_dirs = 0;
     repo_gc_mark_dirs(root);
     qsort(repo->gc_dirs, repo->num_gc_dirs, sizeof(repo_dir_gc_t),
         repo_gc_dir_offset_cmp);
     repo_gc_dirents();
+    gc_dir = repo_gc_find_by_src(commit->root_dir_offset);
+    printf("Remapping commit root: %d => ", commit->root_dir_offset);
+    commit->root_dir_offset =
+        gc_dir == NULL ? 0 :
+        ((gc_dir - repo->gc_dirs) + repo->num_dirs_saved);
+    printf("%d\n", commit->root_dir_offset);
     for(i=repo->num_dirents_saved; i < repo->num_dirents; i++) {
         if(repo_dirent_is_dir(&repo->dirents[i]) &&
             repo->dirents[i].content_offset >= repo->num_dirs_saved) {
@@ -408,6 +417,7 @@ repo_commit(uint32_t revision) {
         repo->num_dirs_saved);
     printf("Number of new dirents: %d\n", repo->num_dirents-
         repo->num_dirents_saved);
+    /* repo_print_tree(0, repo_commit_root_dir(repo_commit_by_revision_id(repo->active_commit))); */
     repo->num_dirs_saved = repo->num_dirs;
     repo->num_dirents_saved = repo->num_dirents;
     repo->active_commit++;
