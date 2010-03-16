@@ -71,4 +71,19 @@ struct repo_s {
 void
 repo_init(uint32_t max_commits, uint32_t max_dirs, uint32_t max_dirents);
 
+void
+repo_copy(uint32_t revision, char* src, char* dst);
+
+void
+repo_add(char* path, uint32_t blob_mark);
+
+void
+repo_modify(char* path, uint32_t blob_mark);
+
+void
+repo_delete(char* path);
+
+void
+repo_commit(uint32_t revision);
+
 #endif

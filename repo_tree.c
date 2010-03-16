@@ -29,6 +29,7 @@
  *
  ******************************************************************************/
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 
@@ -128,4 +129,29 @@ repo_init(uint32_t max_commits, uint32_t max_dirs, uint32_t max_dirents) {
     repo->max_dirs = max_dirs;
     repo->num_dirents = 0;
     repo->max_dirents = max_dirents;
+}
+
+void
+repo_copy(uint32_t revision, char* src, char* dst) {
+    printf("C %d:%s %s\n", revision, src, dst);
+}
+
+void
+repo_add(char* path, uint32_t blob_mark) {
+    printf("A %s %d\n", path, blob_mark);
+}
+
+void
+repo_modify(char* path, uint32_t blob_mark) {
+    printf("M %s %d\n", path, blob_mark);
+}
+
+void
+repo_delete(char* path) {
+    printf("D %s\n", path);
+}
+
+void
+repo_commit(uint32_t revision) {
+    printf("R %d\n", revision);
 }
