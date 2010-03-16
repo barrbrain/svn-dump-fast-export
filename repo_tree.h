@@ -66,6 +66,7 @@ struct repo_s {
     uint32_t max_dirs;
     uint32_t num_dirents;
     uint32_t max_dirents;
+    uint32_t active_commit;
 };
 
 void

@@ -129,11 +129,41 @@ repo_init(uint32_t max_commits, uint32_t max_dirs, uint32_t max_dirents) {
     repo->max_dirs = max_dirs;
     repo->num_dirents = 0;
     repo->max_dirents = max_dirents;
+    repo->active_commit = 0;
 }
 
 void
 repo_copy(uint32_t revision, char* src, char* dst) {
+    char *ctx;
+    repo_dir_t *src_dir, *dst_dir;
+    repo_dirent_t *src_dirent, *dst_dirent;
+    repo_dirent_t src_value;
+    uint32_t src_name;
+    uint32_t dst_name;
     printf("C %d:%s %s\n", revision, src, dst);
+    src_dir = repo_commit_root_dir(repo_commit_by_revision_id(revision));
+    for(src_name = pool_tok_r(src, "/", &ctx);
+        src_name; src_name = pool_tok_r(NULL, "/", &ctx)) {
+        src_dirent = repo_dirent_by_name(src_dir, src_name);
+        if(repo_dirent_is_dir(src_dirent)) {
+            src_dir = repo_dir_from_dirent(src_dirent);
+        } else {
+            break;
+        }
+    }
+    if(src_name) {
+        /* Could not follow complete source path. */
+        return;
+    }
+    src_value = *src_dirent;
+    dst_dir = repo_commit_root_dir(
+        repo_commit_by_revision_id(repo->active_commit));
+    for(dst_name = pool_tok_r(dst, "/", &ctx);
+        dst_name; dst_name = pool_tok_r(NULL, "/", &ctx)) {
+        /* Walk tree and allocate new nodes if necessary. */
+    }
+    dst_dirent->mode = src_value.mode;
+    dst_dirent->content_offset = src_value.content_offset;
 }
 
 void
