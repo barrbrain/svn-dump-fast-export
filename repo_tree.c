@@ -229,14 +229,14 @@ repo_write_dirent(char* path, uint32_t mode, uint32_t content_offset) {
     char *ctx;
     uint32_t name, revision, dirent_offset, dir_offset;
     repo_dir_t* dir;
-    repo_dirent_t* dirent;
+    repo_dirent_t* dirent = NULL;
     revision = repo->active_commit;
     dir = repo_commit_root_dir(repo_commit_by_revision_id(revision));
     dir = repo_clone_dir(dir, 0);
     repo_commit_by_revision_id(revision)->root_dir_offset = dir - repo->dirs;
     for(name = pool_tok_r(path, "/", &ctx);
         name; name = pool_tok_r(NULL, "/", &ctx)) {
-        repo_print_tree(0, repo_commit_root_dir(repo_commit_by_revision_id(repo->active_commit)));
+        repo_print_tree(0, repo_commit_root_dir(repo_commit_by_revision_id(revision)));
         printf("dir[%d]: %d, %d\n", dir - repo->dirs, dir->size, dir->first_offset);
         printf("Descending: %d\n", (name));
         dirent = repo_dirent_by_name(dir, name);
@@ -268,7 +268,10 @@ repo_write_dirent(char* path, uint32_t mode, uint32_t content_offset) {
             printf("Entering existing directory.\n");
             printf("dirent[%d]: %d, %06o, %d\n", dirent - repo->dirents,
                 dirent->name_offset, dirent->mode, dirent->content_offset);
+            dirent_offset = dirent ? dirent - repo->dirents : ~0;
             dir = repo_clone_dir(dir, 0);
+            if(dirent_offset != ~0)
+                repo->dirents[dirent_offset].content_offset = dir - repo->dirs;
         } else if(*ctx /* not last name */) {
             /* Allocate new directory */
             printf("Overwriting entry with new directory.\n");
