@@ -32,6 +32,11 @@
 #ifndef REPO_TREE_H_
 #define REPO_TREE_H_
 
+#define REPO_MODE_DIR 0040000
+#define REPO_MODE_BLB 0100644
+#define REPO_MODE_EXE 0100755
+#define REPO_MODE_LNK 0120000
+
 typedef struct repo_dirent_s repo_dirent_t;
 
 struct repo_dirent_s {
@@ -63,6 +68,7 @@ struct repo_s {
     uint32_t num_commits;
     uint32_t max_commits;
     uint32_t num_dirs;
+    uint32_t num_dirs_saved;
     uint32_t max_dirs;
     uint32_t num_dirents;
     uint32_t max_dirents;

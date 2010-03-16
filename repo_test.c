@@ -13,6 +13,7 @@ int main(int argc, char **argv)
     char buffer[4096];
     uint32_t blob_mark = 1000000000;
     repo_init(30000, 100000, 100000);
+    pool_init(300000, 30000);
     for (fgets(buffer, 4096, stdin);
          !feof(stdin); fgets(buffer, 4096, stdin)) {
 

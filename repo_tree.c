@@ -29,6 +29,7 @@
  *
  ******************************************************************************/
 
+#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -69,7 +70,22 @@ repo_dirent_by_name(repo_dir_t* dir, uint32_t name_offset) {
 
 static int
 repo_dirent_is_dir(repo_dirent_t* dirent) {
-    return (dirent->mode) & 0;
+    return dirent->mode == REPO_MODE_DIR;
+}
+
+static int
+repo_dirent_is_blob(repo_dirent_t* dirent) {
+    return dirent->mode == REPO_MODE_BLB || dirent->mode == REPO_MODE_EXE;
+}
+
+static int
+repo_dirent_is_executable(repo_dirent_t* dirent) {
+    return dirent->mode == REPO_MODE_EXE;
+}
+
+static int
+repo_dirent_is_symlink(repo_dirent_t* dirent) {
+    return dirent->mode == REPO_MODE_LNK;
 }
 
 static repo_dir_t*
@@ -129,13 +145,36 @@ repo_init(uint32_t max_commits, uint32_t max_dirs, uint32_t max_dirents) {
     repo->max_dirs = max_dirs;
     repo->num_dirents = 0;
     repo->max_dirents = max_dirents;
-    repo->active_commit = 0;
+    repo->active_commit = 1;
+    repo_commit_by_revision_id(0)->root_dir_offset = repo_alloc_dir(0);
+    repo->num_dirs_saved = repo->num_dirs;
 }
 
 static repo_dir_t*
-repo_clone_dir(repo_dir_t* orig_dir) {
-    /* TODO: implement copy-on write allocation scheme. */
-    return NULL;
+repo_clone_dir(repo_dir_t* orig_dir, uint32_t padding) {
+    uint32_t orig_offset, new_offset, dirent_offset;
+    orig_offset = orig_dir - repo->dirs;
+    if(orig_offset < repo->num_dirs_saved) {
+        new_offset = repo_alloc_dir(orig_dir->size + padding);
+        orig_dir = &repo->dirs[orig_offset];
+        dirent_offset = repo->dirs[new_offset].first_offset;
+        printf("Creating dir clone.\n");
+    } else {
+        if(padding == 0) return orig_dir;
+        new_offset = orig_offset;
+        dirent_offset = repo_alloc_dirents(orig_dir->size + padding);
+        printf("Reallocating dir clone.\n");
+    }
+    memcpy(&repo->dirents[dirent_offset], repo_first_dirent(orig_dir),
+        orig_dir->size * sizeof(repo_dirent_t));
+    if(orig_offset >= repo->num_dirs_saved) {
+        bzero(repo_first_dirent(orig_dir),
+            orig_dir->size * sizeof(repo_dirent_t));
+    }
+    bzero(&repo->dirents[dirent_offset + orig_dir->size],
+        padding * sizeof(repo_dirent_t));
+    repo->dirs[new_offset].size = orig_dir->size + padding; 
+    return &repo->dirs[new_offset];
 }
 
 static repo_dirent_t*
@@ -145,12 +184,24 @@ repo_read_dirent(uint32_t revision, char* path) {
     repo_dir_t* dir;
     repo_dirent_t* dirent;
     dir = repo_commit_root_dir(repo_commit_by_revision_id(revision));
+    if(dir == NULL) {
+        printf("No root dir.");
+        return NULL;
+    }
     for(name = pool_tok_r(path, "/", &ctx);
         name; name = pool_tok_r(NULL, "/", &ctx)) {
+        printf("Descending: %d\n", (name));
         dirent = repo_dirent_by_name(dir, name);
-        if(repo_dirent_is_dir(dirent)) {
+        if(dirent == NULL) {
+            printf("Not found.");
+            return NULL;
+        } else if(repo_dirent_is_dir(dirent)) {
             dir = repo_dir_from_dirent(dirent);
+            printf("dirent: %d, %o, %d\n",
+                dirent->name_offset, dirent->mode, dirent->content_offset);
         } else {
+            printf("Not a directory: %d, %o, %d\n",
+                dirent->name_offset, dirent->mode, dirent->content_offset);
             break;
         }
     }
@@ -160,28 +211,48 @@ repo_read_dirent(uint32_t revision, char* path) {
 static void
 repo_write_dirent(char* path, uint32_t mode, uint32_t content_offset) {
     char *ctx;
-    uint32_t name, revision;
+    uint32_t name, revision, dirent_offset, dir_offset;
     repo_dir_t* dir;
     repo_dirent_t* dirent;
     revision = repo->active_commit;
     dir = repo_commit_root_dir(repo_commit_by_revision_id(revision));
-    dir = repo_clone_dir(dir);
+    dir = repo_clone_dir(dir, 0);
     for(name = pool_tok_r(path, "/", &ctx);
         name; name = pool_tok_r(NULL, "/", &ctx)) {
+        printf("Descending: %d\n", (name));
         dirent = repo_dirent_by_name(dir, name);
         if(dirent == NULL) {
             /* Add entry to dir */
-        } else if(repo_dirent_is_dir(dirent)) {
-            dir = repo_dir_from_dirent(dirent);
-            dir = repo_clone_dir(dir);
-        } else {
-            /* Allocate new directory */
-            dirent->mode = 0;
+            dir = repo_clone_dir(dir, 1);
+            dirent = &repo_first_dirent(dir)[dir->size -1];
+            dirent->name_offset = name;
+            dirent->mode = REPO_MODE_BLB;
             dirent->content_offset = 0;
+            printf("dirent: %d, %o, %d\n",
+                dirent->name_offset, dirent->mode, dirent->content_offset);
+            qsort(repo_first_dirent(dir), dir->size,
+                sizeof(repo_dirent_t), repo_dirent_name_cmp);
+        } else if(dir = repo_dir_from_dirent(dirent)) {
+            /* Clone dir for write */
+            printf("dirent: %d, %o, %d\n",
+                dirent->name_offset, dirent->mode, dirent->content_offset);
+            dir = repo_clone_dir(dir, 0);
+        } else if(*ctx /* not last name */) {
+            /* Allocate new directory */
+            printf("dirent: %d, %o, %d\n",
+                dirent->name_offset, dirent->mode, dirent->content_offset);
+            dirent->mode = REPO_MODE_DIR;
+            dirent_offset = dirent - repo->dirents;
+            dir_offset = repo_alloc_dir(1);
+            dirent = &repo->dirents[dirent_offset];
+            dir = &repo->dirs[dir_offset];
+            dirent->content_offset = dir_offset;
         }
     }
     dirent->mode = mode;
     dirent->content_offset = content_offset;
+    qsort(repo_first_dirent(dir), dir->size,
+        sizeof(repo_dirent_t), repo_dirent_name_cmp);
 }
 
 void
@@ -196,13 +267,13 @@ repo_copy(uint32_t revision, char* src, char* dst) {
 void
 repo_add(char* path, uint32_t blob_mark) {
     printf("A %s %d\n", path, blob_mark);
-    repo_write_dirent(path, 0, blob_mark);
+    repo_write_dirent(path, REPO_MODE_BLB, blob_mark);
 }
 
 void
 repo_modify(char* path, uint32_t blob_mark) {
     printf("M %s %d\n", path, blob_mark);
-    repo_write_dirent(path, 0, blob_mark);
+    repo_write_dirent(path, REPO_MODE_BLB, blob_mark);
 }
 
 void
@@ -212,5 +283,14 @@ repo_delete(char* path) {
 
 void
 repo_commit(uint32_t revision) {
+    if(revision == 0) return;
     printf("R %d\n", revision);
+    /* compact dirents */
+    repo->num_dirs_saved = repo->num_dirs;
+    repo->active_commit++;
+    repo_alloc_commit(repo->active_commit);
+    repo_commit_by_revision_id(repo->active_commit)->root_dir_offset =
+        repo_commit_by_revision_id(repo->active_commit - 1)->root_dir_offset;
+    printf("Number of dirs: %d\n", repo->num_dirs);
+    printf("Number of dirents: %d\n", repo->num_dirents);
 }
