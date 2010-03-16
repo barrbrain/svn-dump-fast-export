@@ -223,13 +223,13 @@ repo_read_dirent(uint32_t revision, char* path) {
             break;
         }
     }
-    return name ? NULL : dirent;
+    return dirent;
 }
 
 static void
 repo_write_dirent(char* path, uint32_t mode, uint32_t content_offset, uint32_t del) {
     char *ctx, *end;
-    uint32_t name, revision, dirent_offset, dir_offset;
+    uint32_t name, revision, dirent_offset, dir_offset, p_dir_offset;
     repo_dir_t* dir;
     repo_dirent_t* dirent = NULL;
     end = path + strlen(path);
@@ -239,6 +239,7 @@ repo_write_dirent(char* path, uint32_t mode, uint32_t content_offset, uint32_t d
     repo_commit_by_revision_id(revision)->root_dir_offset = dir - repo->dirs;
     for(name = pool_tok_r(path, "/", &ctx);
         name; name = pool_tok_r(NULL, "/", &ctx)) {
+        p_dir_offset = dir - repo->dirs;
         //repo_print_tree(0, repo_commit_root_dir(repo_commit_by_revision_id(revision)));
         //printf("dir[%d]: %d, %d\n", dir - repo->dirs, dir->size, dir->first_offset);
         //printf("Descending: %d\n", (name));
@@ -253,6 +254,9 @@ repo_write_dirent(char* path, uint32_t mode, uint32_t content_offset, uint32_t d
             dirent->name_offset = name;
             dirent->mode = REPO_MODE_BLB;
             dirent->content_offset = 0;
+            qsort(repo_first_dirent(dir), dir->size,
+                sizeof(repo_dirent_t), repo_dirent_name_cmp);
+            dirent = repo_dirent_by_name(dir, name);
             //printf("dirent[%d]: %d, %06o, %d\n", dirent - repo->dirents,
             //    dirent->name_offset, dirent->mode, dirent->content_offset);
             if(ctx <= end /* not last name */) {
@@ -265,8 +269,6 @@ repo_write_dirent(char* path, uint32_t mode, uint32_t content_offset, uint32_t d
                 //printf("dirent[%d]: %d, %06o, %d\n", dirent - repo->dirents,
                 //    dirent->name_offset, dirent->mode, dirent->content_offset);
             }
-            qsort(repo_first_dirent(dir), dir->size,
-                sizeof(repo_dirent_t), repo_dirent_name_cmp);
         } else if(dir = repo_dir_from_dirent(dirent)) {
             /* Clone dir for write */
             //printf("Entering existing directory.\n");
@@ -289,12 +291,14 @@ repo_write_dirent(char* path, uint32_t mode, uint32_t content_offset, uint32_t d
             //    dirent->name_offset, dirent->mode, dirent->content_offset);
         }
     }
-    if(del) dirent->name_offset = 0;
+    if(del) dirent->name_offset = ~0;
     dirent->mode = mode;
     dirent->content_offset = content_offset;
     if(del) {
+        dir = &repo->dirs[p_dir_offset];
         qsort(repo_first_dirent(dir), dir->size,
             sizeof(repo_dirent_t), repo_dirent_name_cmp);
+        dir->size--;
     }
 }
 
