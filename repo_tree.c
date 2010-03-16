@@ -55,8 +55,10 @@ repo_first_dirent(repo_dir_t* dir) {
 
 static int
 repo_dirent_name_cmp(const void *a, const void *b) {
-    return ((repo_dirent_t*)a)->name_offset
-            - ((repo_dirent_t*)b)->name_offset;
+    return (((repo_dirent_t*)a)->name_offset
+            > ((repo_dirent_t*)b)->name_offset) -
+           (((repo_dirent_t*)a)->name_offset
+            < ((repo_dirent_t*)b)->name_offset);
 }
 
 static repo_dirent_t*
@@ -186,7 +188,7 @@ repo_print_tree(uint32_t depth, repo_dir_t* dir) {
     for(j=0;j<dir->size;j++) {
         for(i=0;i<depth;i++) putchar(' ');
         dirent = &repo_first_dirent(dir)[j];
-        //printf("%d\n",dirent->name_offset);
+        printf("%d\n",dirent->name_offset);
         if(repo_dirent_is_dir(dirent)) {
             repo_print_tree(depth+1, repo_dir_from_dirent(dirent));
         }
@@ -225,7 +227,7 @@ repo_read_dirent(uint32_t revision, char* path) {
 }
 
 static void
-repo_write_dirent(char* path, uint32_t mode, uint32_t content_offset) {
+repo_write_dirent(char* path, uint32_t mode, uint32_t content_offset, uint32_t del) {
     char *ctx, *end;
     uint32_t name, revision, dirent_offset, dir_offset;
     repo_dir_t* dir;
@@ -287,10 +289,13 @@ repo_write_dirent(char* path, uint32_t mode, uint32_t content_offset) {
             //    dirent->name_offset, dirent->mode, dirent->content_offset);
         }
     }
+    if(del) dirent->name_offset = 0;
     dirent->mode = mode;
     dirent->content_offset = content_offset;
-    qsort(repo_first_dirent(dir), dir->size,
-        sizeof(repo_dirent_t), repo_dirent_name_cmp);
+    if(del) {
+        qsort(repo_first_dirent(dir), dir->size,
+            sizeof(repo_dirent_t), repo_dirent_name_cmp);
+    }
 }
 
 void
@@ -299,27 +304,28 @@ repo_copy(uint32_t revision, char* src, char* dst) {
     printf("C %d:%s %s\n", revision, src, dst);
     src_dirent = repo_read_dirent(revision, src);
     if(src_dirent == NULL) return;
-    repo_write_dirent(dst, src_dirent->mode, src_dirent->content_offset);
+    repo_write_dirent(dst, src_dirent->mode, src_dirent->content_offset, 0);
     //repo_print_tree(0, repo_commit_root_dir(repo_commit_by_revision_id(repo->active_commit)));
 }
 
 void
 repo_add(char* path, uint32_t blob_mark) {
     printf("A %s %d\n", path, blob_mark);
-    repo_write_dirent(path, REPO_MODE_BLB, blob_mark);
+    repo_write_dirent(path, REPO_MODE_BLB, blob_mark, 0);
     //repo_print_tree(0, repo_commit_root_dir(repo_commit_by_revision_id(repo->active_commit)));
 }
 
 void
 repo_modify(char* path, uint32_t blob_mark) {
     printf("M %s %d\n", path, blob_mark);
-    repo_write_dirent(path, REPO_MODE_BLB, blob_mark);
+    repo_write_dirent(path, REPO_MODE_BLB, blob_mark, 0);
     //repo_print_tree(0, repo_commit_root_dir(repo_commit_by_revision_id(repo->active_commit)));
 }
 
 void
 repo_delete(char* path) {
     printf("D %s\n", path);
+    repo_write_dirent(path, 0, 0, 1);
     //repo_print_tree(0, repo_commit_root_dir(repo_commit_by_revision_id(repo->active_commit)));
 }
 
