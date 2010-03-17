@@ -36,8 +36,70 @@
 #ifndef SVNDUMP_H_
 #define SVNDUMP_H_
 
+/**
+ * node was moved to somwhere else
+ * (this is not contained in the dump)
+ * (only used in the FileChangeSet)
+ */
+#define NODEACT_REMOVE 5
+
+/**
+ * node was moved from somwhere else
+ * (this is not contained in the dump)
+ * (only used in the FileChangeSet)
+ */
+#define NODEACT_MOVE 4
+
+/**
+ * not clear if moved (if deleted afterwards) or
+ * added as copy (which can not be modeled straight in ccase).
+ * Will be used on create of SvnNodeEntry iff
+ * action is add and source is given.
+ * Will be modified after importing all files
+ * of a revision to NODEACT_ADD (copy which can
+ * not be modeled in ccase) or NODEACT_MOVE
+ */
+#define NODEACT_COPY_OR_MOVE 3
+
+/**
+ * node was deleted
+ */
+#define NODEACT_DELETE 2
+
+/**
+ * Node was added or copied from other location
+ */
+#define NODEACT_ADD 1
+
+/**
+ * node was modified
+ */
+#define NODEACT_CHANGE 0
+
+/**
+ * unknown action
+ */
+#define NODEACT_UNKNOWN -1
+
+/**
+ * Node is a directory
+ */
+#define NODEKIND_DIR 1
+
+/**
+ * Node is a file
+ */
+#define NODEKIND_FILE 0
+
+/**
+ * unknown type of node
+ */
+#define NODEKIND_UNKNOWN -1
+
 char *svndump_read_line(void);
 
 char *svndump_read_string(uint32_t len);
+
+void svnrev_read(uint32_t revision_id);
 
 #endif
