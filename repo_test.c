@@ -37,7 +37,8 @@ int main(int argc, char **argv)
             a1 = strtok(NULL, "\n");
             rev = atoi(a1);
             repo_commit(rev);
-            if(rev) repo_diff(rev-1, rev);
+            if (rev)
+                repo_diff(rev - 1, rev);
         }
     }
     return 0;

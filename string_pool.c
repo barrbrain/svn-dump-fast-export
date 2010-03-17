@@ -44,7 +44,7 @@ typedef struct node_s node_t;
 
 struct node_s {
     uint32_t offset;
-    trp_node(node_t) children;
+     trp_node(node_t) children;
 };
 
 typedef trp(node_t) tree_t;
@@ -61,27 +61,28 @@ struct pool_s {
 
 static struct pool_s *pool;
 
-static char*
-node_value(node_t *node) {
+static char *node_value(node_t * node)
+{
     return &(pool->data[node->offset]);
 }
 
-static int
-node_value_cmp(node_t *a, node_t *b) {
+static int node_value_cmp(node_t * a, node_t * b)
+{
     return strcmp(node_value(a), node_value(b));
 }
 
-static int
-node_indentity_cmp(node_t *a, node_t *b) {
+static int node_indentity_cmp(node_t * a, node_t * b)
+{
     int r = node_value_cmp(a, b);
     return r ? r : (((uintptr_t) a) > ((uintptr_t) b))
-	  - (((uintptr_t) a) < ((uintptr_t) b));
+        - (((uintptr_t) a) < ((uintptr_t) b));
 }
 
-trp_gen(static, tree_, tree_t, node_t, children, pool->index, node_indentity_cmp);
+trp_gen(static, tree_, tree_t, node_t, children, pool->index,
+        node_indentity_cmp);
 
-void
-pool_init(uint32_t max_size, uint32_t max_entries) {
+void pool_init(uint32_t max_size, uint32_t max_entries)
+{
     pool = malloc(sizeof(*pool));
     pool->data = malloc(max_size);
     pool->size = 0;
@@ -93,39 +94,40 @@ pool_init(uint32_t max_size, uint32_t max_entries) {
     tree_new(&pool->tree, 42);
 }
 
-char* 
-pool_fetch(uint32_t entry) {
+char *pool_fetch(uint32_t entry)
+{
     return node_value(&pool->index[entry]);
 }
 
-uint32_t
-pool_intern(char* key) {
+uint32_t pool_intern(char *key)
+{
     uint32_t key_len = strlen(key) + 1;
     node_t *node = NULL;
     node_t *match = NULL;
-    if(pool->entries == pool->max_entries) {
-        pool->max_entries *= 2; 
-        pool->index = realloc(pool->index, pool->max_entries * sizeof(node_t));
+    if (pool->entries == pool->max_entries) {
+        pool->max_entries *= 2;
+        pool->index =
+            realloc(pool->index, pool->max_entries * sizeof(node_t));
     }
     node = &pool->index[pool->entries];
     node->offset = pool->size;
-    if(pool->size + key_len > pool->max_size) {
+    if (pool->size + key_len > pool->max_size) {
         pool->max_size *= 2;
         pool->data = realloc(pool->data, pool->max_size);
     }
     strcpy(node_value(node), key);
     match = tree_psearch(&pool->tree, node);
-    if(!match || node_value_cmp(node, match)) {
-       tree_insert(&pool->tree, node);
-       pool->size += strlen(key) + 1;
-       return pool->entries++;
+    if (!match || node_value_cmp(node, match)) {
+        tree_insert(&pool->tree, node);
+        pool->size += strlen(key) + 1;
+        return pool->entries++;
     } else {
-       return match - pool->index;
+        return match - pool->index;
     }
 }
 
-uint32_t
-pool_tok_r(char *str, const char *delim, char **saveptr) {
-    char * token = strtok_r(str, delim, saveptr);
+uint32_t pool_tok_r(char *str, const char *delim, char **saveptr)
+{
+    char *token = strtok_r(str, delim, saveptr);
     return token ? pool_intern(token) : 0;
 }

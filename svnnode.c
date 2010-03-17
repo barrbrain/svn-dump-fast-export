@@ -32,46 +32,51 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  ******************************************************************************/
-
+    
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "svndump.h"
 #include "svnnode.h"
-
+    
 /**
  * read a modified file (node) within a revision
- */
-void
-svnnode_read(char* fname) {
+ */ 
+void  svnnode_read(char *fname)
+{
     int type = NODEKIND_UNKNOWN;
     int action;
     int propLength = 0;
     int textLength = 0;
-    char* src = NULL;
-    char* fullSrcPath = NULL;
-    char* t;
-    char* val;
-
+    char *src = NULL;
+    char *fullSrcPath = NULL;
+    char *t;
+    char *val;
     t = svndump_read_line();
+    
     do {
         if (!strncmp(t, "Node-kind:", 10)) {
             val = &t[11];
-            if (!strncasecmp(val,"dir",3))
+            if (!strncasecmp(val, "dir", 3))
                 type = NODEKIND_DIR;
+            
             else if (!strncasecmp(val, "file", 4))
                 type = NODEKIND_FILE;
+            
             else
                 type = NODEKIND_UNKNOWN;
         } else if (!strncmp(t, "Node-action", 11)) {
             val = &t[13];
-            if (!strncasecmp(val,"delete",6))
+            if (!strncasecmp(val, "delete", 6))
                 action = NODEACT_DELETE;
+            
             else if (!strncasecmp(val, "add", 3))
                 action = NODEACT_ADD;
+            
             else if (!strncasecmp(val, "change", 6))
                 action = NODEACT_CHANGE;
+            
             else
                 action = NODEACT_UNKNOWN;
         } else if (!strncmp(t, "Node-copyfrom-path", 18)) {
@@ -85,22 +90,22 @@ svnnode_read(char* fname) {
         }
         t = svndump_read_line();
     } while (strlen(t) && !feof(stdin));
-
-    /* check if it's real add or possibly copy_or_move */
-    if ((NULL != src) && (action == NODEACT_ADD)) {
-        /* we don't really know at the moment */
-        action = NODEACT_COPY_OR_MOVE;
+    
+        /* check if it's real add or possibly copy_or_move */ 
+        if ((NULL != src) && (action == NODEACT_ADD)) {
+        
+            /* we don't really know at the moment */ 
+            action = NODEACT_COPY_OR_MOVE;
     }
-
     if (propLength) {
-	seek(propLength);
+        seek(propLength);
     }
-
     if (textLength) {
-       copy_bytes(textLength);
+        copy_bytes(textLength);
     }
-
     t = svndump_read_line();
     if (!strlen(t))
         svndump_pushBackInputLine(t);
 }
+
+

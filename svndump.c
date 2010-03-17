@@ -31,13 +31,13 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
-  ******************************************************************************/ 
+  ******************************************************************************/
 
 /*
  * Parse and rearrange a svnadmin dump.
  * Create the dump with:
  * svnadmin dump --incremental -r<startrev>:<endrev> <repository> >outfile
- */ 
+ */
 
 #include <stdint.h>
 #include <string.h>
@@ -48,13 +48,13 @@
 /*
  * Date format:
  * "yyyy-MM-dd'T'HH:mm:ss"
- */ 
+ */
 
 /*
  * create dump representation by importing dump file
- */ 
-void 
-svndump_read(void) {
+ */
+void svndump_read(void)
+{
     char *t = svndump_read_line();
     while (t && strncmp(t, "Revision-number:", 16))
         t = svndump_read_line();
@@ -63,16 +63,16 @@ svndump_read(void) {
         svnrev_read(atoi(&t[17]));
         t = svndump_read_line();
     } while (strlen(t) && !feof(stdin));
-} 
+}
 
 /*
  * read string up to newline from input stream
  * return all characters except the newline
- */ 
+ */
 static char line_buffer[10000];
 
-char*
-svndump_read_line(void) {
+char *svndump_read_line(void)
+{
     int len;
     char *res = fgets(line_buffer, 10000, stdin);
 
@@ -81,17 +81,17 @@ svndump_read_line(void) {
 
         if (res[len - 1] == '\n')
             res[len - 1] = '\0';
-    } 
+    }
     return res;
-} 
+}
 
 
 /*
  * so a line can be pushed-back after read
- */ 
+ */
 static char *lastLine = NULL;
 
-void 
-svndump_pushBackInputLine(char *input) {
+void svndump_pushBackInputLine(char *input)
+{
     lastLine = input;
-} 
+}

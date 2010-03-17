@@ -32,49 +32,49 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  ******************************************************************************/
-
+    
 /**
  * Note: creating the revision will import it from
  * stdin
- */
-
+ */ 
+    
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include "svndump.h"
-
-int strendswith(char* s, char* end);
+int strendswith(char *s, char *end);
 
 /**
  * create revision reading from stdin
  * param number revision number
- */
-void
-svnrev_read(int number) {
-    char* descr = "";
-    char* author = "";
-    char* date = "";
+ */ 
+void  svnrev_read(int number)
+{
+    char *descr = "";
+    char *author = "";
+    char *date = "";
     char *t;
     int len;
-    char* key = "";
-    char* val = "";
-
-    /* skip rest of revision definition */
-    while (strlen(svndump_read_line()));
-    /* key-value pairs containing log, date etc. */
-    t = svndump_read_line();
+    char *key = "";
+    char *val = "";
+    
+        /* skip rest of revision definition */ 
+        while (strlen(svndump_read_line()));
+    
+        /* key-value pairs containing log, date etc. */ 
+        t = svndump_read_line();
+    
     do {
-        if (!strncmp(t,"K ", 2)) {
+        if (!strncmp(t, "K ", 2)) {
             len = atoi(&t[2]);
             key = svndump_read_string(len);
             svndump_read_line();
             t = svndump_read_line();
-        } else if (!strncmp(t,"V ",2)) {
+        } else if (!strncmp(t, "V ", 2)) {
             len = atoi(&t[2]);
             val = svndump_read_string(len);
-
             if (strendswith(key, ":log"))
-            {
+                 {
                 descr = val;
             } else if (strendswith(key, ":author")) {
                 author = val;
@@ -86,15 +86,15 @@ svnrev_read(int number) {
             t = svndump_read_line();
         }
     } while (strlen(t) && strncasecmp(t, "PROPS-END", 9));
-
+    
     do {
         t = svndump_read_line();
     } while ((!feof(stdin)) && (!strlen(t)));
-
-    while (strncmp(t,"Revision-number:", 16) && !feof(stdin)) {
-        if (!strncmp(t,"Node-path:",10)) {
+    while (strncmp(t, "Revision-number:", 16) && !feof(stdin)) {
+        if (!strncmp(t, "Node-path:", 10)) {
             svnnode_read(&t[11]);
         }
+        
         do {
             t = svndump_read_line();
         } while ((!feof(stdin)) && (!strlen(t)));
@@ -102,3 +102,5 @@ svnrev_read(int number) {
     if (strlen(t))
         svndump_pushBackInputLine(t);
 }
+
+

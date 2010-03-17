@@ -31,15 +31,13 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
-  ******************************************************************************/ 
+  ******************************************************************************/
 
 #ifndef SVNDUMP_H_
 #define SVNDUMP_H_
 
-char*
-svndump_read_line(void);
+char *svndump_read_line(void);
 
-char*
-svndump_read_string(uint32_t len);
+char *svndump_read_string(uint32_t len);
 
 #endif

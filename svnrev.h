@@ -31,12 +31,11 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
-  ******************************************************************************/ 
+  ******************************************************************************/
 
 #ifndef SVNREV_H_
 #define SVNREV_H_
 
-void
-svnrev_read(uint32_t revision_id);
+void svnrev_read(uint32_t revision_id);
 
 #endif

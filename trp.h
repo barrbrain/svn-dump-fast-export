@@ -256,4 +256,4 @@ a_pre##insert(a_t_type *treap, a_type *node) {				\
     trp_node_new(a_base, a_type, a_field, treap, node);			\
     treap->trp_root = a_pre##insert_recurse(treap->trp_root, node);	\
 }
-#endif /* TRP_H_ */
+#endif                          /* TRP_H_ */
