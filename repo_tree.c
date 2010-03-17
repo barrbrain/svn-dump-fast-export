@@ -34,6 +34,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+#include "string_pool.h"
 #include "repo_tree.h"
 
 static repo_t *repo;
@@ -405,6 +406,9 @@ repo_gc_dirs(void) {
 }
 
 void
+repo_diff(uint32_t r1, uint32_t r2);
+
+void
 repo_commit(uint32_t revision) {
     if(revision == 0) return;
     printf("R %d\n", revision);
@@ -420,10 +424,106 @@ repo_commit(uint32_t revision) {
     /* repo_print_tree(0, repo_commit_root_dir(repo_commit_by_revision_id(repo->active_commit))); */
     repo->num_dirs_saved = repo->num_dirs;
     repo->num_dirents_saved = repo->num_dirents;
+    repo_diff(repo->active_commit-1, repo->active_commit);
     repo->active_commit++;
     repo_alloc_commit(repo->active_commit);
     repo_commit_by_revision_id(repo->active_commit)->root_dir_offset =
         repo_commit_by_revision_id(repo->active_commit - 1)->root_dir_offset;
-    printf("Number of dirs: %d\n", repo->num_dirs);
-    printf("Number of dirents: %d\n", repo->num_dirents);
+    printf("Number of commits: %d (%dB)\n",
+        repo->num_commits, repo->num_commits * sizeof(repo_commit_t));
+    printf("Number of dirs: %d (%dB)\n",
+        repo->num_dirs, repo->num_dirs * sizeof(repo_dir_t));
+    printf("Number of dirents: %d (%dB)\n",
+        repo->num_dirents, repo->num_dirents * sizeof(repo_dirent_t));
+}
+
+static void
+repo_print_path(uint32_t depth, uint32_t* path) {
+    uint32_t p;
+    for(p=0;p<depth;p++) {
+        fputs(pool_fetch(path[p]), stdout);
+        if(p<depth-1) putchar('/');
+    }
+}
+
+static void
+repo_git_delete(uint32_t depth, uint32_t* path) {
+    putchar('D');
+    putchar(' ');
+    repo_print_path(depth, path);
+    putchar('\n');
+}
+
+static void
+repo_git_add_r(uint32_t depth, uint32_t* path, repo_dir_t* dir);
+
+static void
+repo_git_add(uint32_t depth, uint32_t* path, repo_dirent_t* dirent) {
+    if(repo_dirent_is_dir(dirent)) {
+        repo_git_add_r(depth, path, repo_dir_from_dirent(dirent));
+    } else {
+        printf("M %06o :%d ", dirent->mode, dirent->content_offset);    
+        repo_print_path(depth, path);
+        putchar('\n');
+    }
+}
+
+static void
+repo_git_add_r(uint32_t depth, uint32_t* path, repo_dir_t* dir) {
+    uint32_t o;
+    repo_dirent_t *de;
+    de = repo_first_dirent(dir);
+    for(o = 0; o < dir->size; o ++) {
+        path[depth] = de[o].name_offset;
+        repo_git_add(depth + 1, path, &de[o]);
+    }
+}
+
+static void
+repo_diff_r(uint32_t depth, uint32_t* path, repo_dir_t* dir1, repo_dir_t* dir2) {
+    uint32_t o1, o2, p;
+    repo_dirent_t *de1, *de2;
+    de1 = repo_first_dirent(dir1);
+    de2 = repo_first_dirent(dir2);
+    for(o1 = o2 = 0; o2 < dir2->size; o2++) {
+       for(; o1 < dir1->size && de1[o1].name_offset < de2[o2].name_offset; o1++) {
+           /* delete(o1) */
+           path[depth] = de1[o1].name_offset;
+           repo_git_delete(depth + 1, path);
+       }
+       if(o1 < dir1->size && de1[o1].name_offset == de2[o2].name_offset) {
+           /* diff(o1, o2) */
+           path[depth] = de1[o1].name_offset;
+           if(de1[o1].content_offset != de2[o2].content_offset) {
+               if(repo_dirent_is_dir(&de1[o1]) && repo_dirent_is_dir(&de2[o2])) {
+                   /* recursive diff */
+                   repo_diff_r(depth + 1, path, repo_dir_from_dirent(&de1[o1]),
+                       repo_dir_from_dirent(&de2[o2]));
+                   } else {
+                   /* delete o1, add o2 */
+                      repo_git_delete(depth + 1, path);
+                      path[depth] = de2[o2].name_offset;
+                      repo_git_add(depth + 1, path, &de2[o2]);
+                   }
+           }
+       } else {
+           /* add(o2) */
+           path[depth] = de2[o2].name_offset;
+           repo_git_add(depth + 1, path, &de2[o2]);
+       }
+    }
+    for(; o1 < dir1->size; o1++) {
+           /* delete(o1) */
+           path[depth] = de1[o1].name_offset;
+           repo_git_delete(depth + 1, path);
+    }
+}
+
+void
+repo_diff(uint32_t r1, uint32_t r2) {
+    uint32_t path_stack[1000];
+    repo_diff_r(0,
+        path_stack,
+        repo_commit_root_dir(repo_commit_by_revision_id(r1)),
+        repo_commit_root_dir(repo_commit_by_revision_id(r2)));
 }
