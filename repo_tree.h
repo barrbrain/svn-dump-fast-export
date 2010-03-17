@@ -105,4 +105,7 @@ repo_delete(char* path);
 void
 repo_commit(uint32_t revision);
 
+void
+repo_diff(uint32_t r1, uint32_t r2);
+
 #endif

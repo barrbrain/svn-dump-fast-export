@@ -284,7 +284,7 @@ repo_write_dirent(char* path, uint32_t mode, uint32_t content_offset, uint32_t d
 void
 repo_copy(uint32_t revision, char* src, char* dst) {
     repo_dirent_t *src_dirent;
-    printf("C %d:%s %s\n", revision, src, dst);
+    fprintf(stderr, "C %d:%s %s\n", revision, src, dst);
     src_dirent = repo_read_dirent(revision, src);
     if(src_dirent == NULL) return;
     repo_write_dirent(dst, src_dirent->mode, src_dirent->content_offset, 0);
@@ -292,19 +292,19 @@ repo_copy(uint32_t revision, char* src, char* dst) {
 
 void
 repo_add(char* path, uint32_t blob_mark) {
-    printf("A %s %d\n", path, blob_mark);
+    fprintf(stderr, "A %s %d\n", path, blob_mark);
     repo_write_dirent(path, REPO_MODE_BLB, blob_mark, 0);
 }
 
 void
 repo_modify(char* path, uint32_t blob_mark) {
-    printf("M %s %d\n", path, blob_mark);
+    fprintf(stderr, "M %s %d\n", path, blob_mark);
     repo_write_dirent(path, REPO_MODE_BLB, blob_mark, 0);
 }
 
 void
 repo_delete(char* path) {
-    printf("D %s\n", path);
+    fprintf(stderr, "D %s\n", path);
     repo_write_dirent(path, 0, 0, 1);
 }
 
@@ -381,11 +381,9 @@ repo_gc_dirs(void) {
         repo_gc_dir_offset_cmp);
     repo_gc_dirents();
     gc_dir = repo_gc_find_by_src(commit->root_dir_offset);
-    printf("Remapping commit root: %d => ", commit->root_dir_offset);
     commit->root_dir_offset =
         gc_dir == NULL ? 0 :
         ((gc_dir - repo->gc_dirs) + repo->num_dirs_saved);
-    printf("%d\n", commit->root_dir_offset);
     for(i=repo->num_dirents_saved; i < repo->num_dirents; i++) {
         if(repo_dirent_is_dir(&repo->dirents[i]) &&
             repo->dirents[i].content_offset >= repo->num_dirs_saved) {
@@ -406,35 +404,16 @@ repo_gc_dirs(void) {
 }
 
 void
-repo_diff(uint32_t r1, uint32_t r2);
-
-void
 repo_commit(uint32_t revision) {
     if(revision == 0) return;
-    printf("R %d\n", revision);
-    printf("Number of new dirs before GC: %d\n", repo->num_dirs -
-        repo->num_dirs_saved);
-    printf("Number of new dirents before GC: %d\n", repo->num_dirents-
-        repo->num_dirents_saved);
+    fprintf(stderr, "R %d\n", revision);
     repo_gc_dirs();
-    printf("Number of new dirs: %d\n", repo->num_dirs -
-        repo->num_dirs_saved);
-    printf("Number of new dirents: %d\n", repo->num_dirents-
-        repo->num_dirents_saved);
-    /* repo_print_tree(0, repo_commit_root_dir(repo_commit_by_revision_id(repo->active_commit))); */
     repo->num_dirs_saved = repo->num_dirs;
     repo->num_dirents_saved = repo->num_dirents;
-    repo_diff(repo->active_commit-1, repo->active_commit);
     repo->active_commit++;
     repo_alloc_commit(repo->active_commit);
     repo_commit_by_revision_id(repo->active_commit)->root_dir_offset =
         repo_commit_by_revision_id(repo->active_commit - 1)->root_dir_offset;
-    printf("Number of commits: %d (%dB)\n",
-        repo->num_commits, repo->num_commits * sizeof(repo_commit_t));
-    printf("Number of dirs: %d (%dB)\n",
-        repo->num_dirs, repo->num_dirs * sizeof(repo_dir_t));
-    printf("Number of dirents: %d (%dB)\n",
-        repo->num_dirents, repo->num_dirents * sizeof(repo_dirent_t));
 }
 
 static void

@@ -8,6 +8,7 @@
 
 int main(int argc, char **argv)
 {
+    uint32_t rev;
     char *cmd;
     char *a1, *a2, *a3;
     char buffer[4096];
@@ -34,7 +35,9 @@ int main(int argc, char **argv)
             repo_delete(a1);
         } else if (*cmd == 'R') {
             a1 = strtok(NULL, "\n");
-            repo_commit(atoi(a1));
+            rev = atoi(a1);
+            repo_commit(rev);
+            if(rev) repo_diff(rev-1, rev);
         }
     }
     return 0;
