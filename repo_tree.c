@@ -485,37 +485,45 @@ repo_diff_r(uint32_t depth, uint32_t* path, repo_dir_t* dir1, repo_dir_t* dir2) 
     repo_dirent_t *de1, *de2;
     de1 = repo_first_dirent(dir1);
     de2 = repo_first_dirent(dir2);
-    for(o1 = o2 = 0; o2 < dir2->size; o2++) {
-       for(; o1 < dir1->size && de1[o1].name_offset < de2[o2].name_offset; o1++) {
+    for(o1 = o2 = 0; o1 < dir1->size && o2 < dir2->size;) {
+       if(de1[o1].name_offset < de2[o2].name_offset) {
            /* delete(o1) */
            path[depth] = de1[o1].name_offset;
            repo_git_delete(depth + 1, path);
-       }
-       if(o1 < dir1->size && de1[o1].name_offset == de2[o2].name_offset) {
-           /* diff(o1, o2) */
+           o1++;
+       } else if(de1[o1].name_offset == de2[o2].name_offset) {
            path[depth] = de1[o1].name_offset;
            if(de1[o1].content_offset != de2[o2].content_offset) {
                if(repo_dirent_is_dir(&de1[o1]) && repo_dirent_is_dir(&de2[o2])) {
                    /* recursive diff */
                    repo_diff_r(depth + 1, path, repo_dir_from_dirent(&de1[o1]),
                        repo_dir_from_dirent(&de2[o2]));
-                   } else {
+               } else {
                    /* delete o1, add o2 */
-                      repo_git_delete(depth + 1, path);
-                      path[depth] = de2[o2].name_offset;
-                      repo_git_add(depth + 1, path, &de2[o2]);
+                   if(repo_dirent_is_dir(&de1[o1]) != repo_dirent_is_dir(&de2[o2])) {
+                       repo_git_delete(depth + 1, path);
                    }
+                   repo_git_add(depth + 1, path, &de2[o2]);
+               }
            }
+           o1++;
+           o2++;
        } else {
            /* add(o2) */
            path[depth] = de2[o2].name_offset;
            repo_git_add(depth + 1, path, &de2[o2]);
+           o2++;
        }
     }
     for(; o1 < dir1->size; o1++) {
            /* delete(o1) */
            path[depth] = de1[o1].name_offset;
            repo_git_delete(depth + 1, path);
+    }
+    for(; o2 < dir2->size; o2++) {
+           /* add(o2) */
+           path[depth] = de2[o2].name_offset;
+           repo_git_add(depth + 1, path, &de2[o2]);
     }
 }
 
