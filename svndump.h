@@ -39,4 +39,7 @@
 char*
 svndump_read_line(void);
 
+char*
+svndump_read_string(uint32_t len);
+
 #endif
