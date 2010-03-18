@@ -63,7 +63,7 @@ void svndump_read(void)
         return;
 
     do {
-        svnrev_read(atoi(&t[17]));
+        svnrev_read(atoi(&t[17]) + 1);
         t = svndump_read_line();
     } while (t && strlen(t) && !feof(stdin));
 }
@@ -247,8 +247,8 @@ void svnnode_read(char *fname)
 void svnrev_read(uint32_t number)
 {
     char *descr = "";
-    char *author = "";
-    char *date = "";
+    char *author = "nobody";
+    char *date = "today";
     char *t;
     int len;
     char *key = "";
@@ -306,4 +306,11 @@ void svnrev_read(uint32_t number)
     }
     if (t && strlen(t))
         svndump_pushBackInputLine(t);
+
+    repo_commit(number);
+    printf("commit master\nmark :%d\ncommitter %s <%s@local> %s\n",
+           number, author, author, date);
+    printf("data %d\n%s\n", strlen(descr), descr);
+    repo_diff(number - 1, number);
+    fputc('\n', stdout);
 }
