@@ -137,6 +137,22 @@ void copy_bytes(int textLength)
     }
 }
 
+void skip_bytes(int textLength)
+{
+    int i;
+    for (i = 0; i < textLength; i++) {
+        fgetc(stdin);
+        if (feof(stdin))
+            break;
+    }
+}
+
+uint32_t next_blob_mark(void)
+{
+    static int32_t mark = 1000000000;
+    return mark++;
+}
+
 /**
  * read a modified file (node) within a revision
  */
@@ -150,6 +166,7 @@ void svnnode_read(char *fname)
     char *fullSrcPath = NULL;
     char *t;
     char *val;
+    uint32_t mark = 0;;
 
     fprintf(stderr, "Node path: %s\n", fname);
 
@@ -204,10 +221,13 @@ void svnnode_read(char *fname)
         action = NODEACT_COPY_OR_MOVE;
     }
     if (propLength) {
-        fseek(stdin, propLength, SEEK_CUR);
+        skip_bytes(propLength);
     }
     if (textLength) {
+        mark = next_blob_mark();
+        printf("blob\nmark :%d\ndata %d\n", mark, textLength);
         copy_bytes(textLength);
+        fputc('\n', stdout);
     }
     t = svndump_read_line();
     if (t && !strlen(t))
