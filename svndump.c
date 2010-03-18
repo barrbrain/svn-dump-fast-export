@@ -163,6 +163,7 @@ void svnnode_read(char *fname)
     int propLength = 0;
     int textLength = 0;
     char *src = NULL;
+    int srcRev;
     char *dst = strdup(fname);
     char *t;
     char *val;
@@ -202,6 +203,10 @@ void svnnode_read(char *fname)
         } else if (!strncmp(t, "Node-copyfrom-path", 18)) {
             src = strdup(&t[20]);
             fprintf(stderr, "Node copy path: %s\n", src);
+        } else if (!strncmp(t, "Node-copyfrom-rev", 17)) {
+            val = &t[19];
+            srcRev = atoi(val);
+            fprintf(stderr, "Node copy revision: %d\n", srcRev);
         } else if (!strncmp(t, "Text-content-length:", 20)) {
             val = &t[21];
             textLength = atoi(val);
@@ -228,18 +233,18 @@ void svnnode_read(char *fname)
         svndump_pushBackInputLine(t);
 
     if (action == NODEACT_DELETE) {
-        repo_delete(dst);    
+        repo_delete(dst);
     } else if (action == NODEACT_CHANGE) {
-        if(mark) {
+        if (mark) {
             repo_modify(dst, mark);
-        } else if(src) {
-            repo_copy(0, src, dst);
+        } else if (src) {
+            repo_copy(srcRev, src, dst);
         }
     } else if (action == NODEACT_ADD) {
-        if(mark) {
+        if (mark) {
             repo_add(dst, mark);
-        } else if(src) {
-            repo_copy(0, src, dst);
+        } else if (src) {
+            repo_copy(srcRev, src, dst);
         }
     }
 }
@@ -318,8 +323,9 @@ void svnrev_read(uint32_t number)
         svndump_pushBackInputLine(t);
 
     repo_commit(number);
-    printf("commit master\nmark :%d\ncommitter %s <%s@local> %s\n",
-           number, author, author, date);
+    printf
+        ("commit refs/heads/master\nmark :%d\ncommitter %s <%s@local> %s\n",
+         number, author, author, date);
     printf("data %d\n%s\n", strlen(descr), descr);
     repo_diff(number - 1, number);
     fputc('\n', stdout);
