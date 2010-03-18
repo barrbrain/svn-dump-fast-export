@@ -163,7 +163,7 @@ void svnnode_read(char *fname)
     int propLength = 0;
     int textLength = 0;
     char *src = NULL;
-    char *fullSrcPath = NULL;
+    char *dst = strdup(fname);
     char *t;
     char *val;
     uint32_t mark = 0;;
@@ -200,7 +200,7 @@ void svnnode_read(char *fname)
             else
                 action = NODEACT_UNKNOWN;
         } else if (!strncmp(t, "Node-copyfrom-path", 18)) {
-            src = &t[20];
+            src = strdup(&t[20]);
             fprintf(stderr, "Node copy path: %s\n", src);
         } else if (!strncmp(t, "Text-content-length:", 20)) {
             val = &t[21];
@@ -214,12 +214,6 @@ void svnnode_read(char *fname)
         t = svndump_read_line();
     } while (t && strlen(t) && !feof(stdin));
 
-    /* check if it's real add or possibly copy_or_move */
-    if ((NULL != src) && (action == NODEACT_ADD)) {
-
-        /* we don't really know at the moment */
-        action = NODEACT_COPY_OR_MOVE;
-    }
     if (propLength) {
         skip_bytes(propLength);
     }
@@ -232,6 +226,22 @@ void svnnode_read(char *fname)
     t = svndump_read_line();
     if (t && !strlen(t))
         svndump_pushBackInputLine(t);
+
+    if (action == NODEACT_DELETE) {
+        repo_delete(dst);    
+    } else if (action == NODEACT_CHANGE) {
+        if(mark) {
+            repo_modify(dst, mark);
+        } else if(src) {
+            repo_copy(0, src, dst);
+        }
+    } else if (action == NODEACT_ADD) {
+        if(mark) {
+            repo_add(dst, mark);
+        } else if(src) {
+            repo_copy(0, src, dst);
+        }
+    }
 }
 
 /**
@@ -248,7 +258,7 @@ void svnrev_read(uint32_t number)
 {
     char *descr = "";
     char *author = "nobody";
-    char *date = "today";
+    char *date = "now";
     char *t;
     int len;
     char *key = "";
@@ -313,4 +323,6 @@ void svnrev_read(uint32_t number)
     printf("data %d\n%s\n", strlen(descr), descr);
     repo_diff(number - 1, number);
     fputc('\n', stdout);
+
+    printf("progress Imported commit %d.\n\n", number);
 }
