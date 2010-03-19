@@ -124,26 +124,28 @@ char *svndump_read_string(int len)
     return s;
 }
 
-void copy_bytes(int textLength)
+char byte_buffer[4096];
+void copy_bytes(int len)
 {
-    int i;
-    char c;
-    for (i = 0; i < textLength; i++) {
-        c = fgetc(stdin);
-        if (!feof(stdin))
-            fputc(c, stdout);
-        else
-            break;
+    int in, out;
+    while (len > 0 && !feof(stdin)) {
+        in = len < 4096 ? len : 4096;
+        in = fread(byte_buffer, 1, in, stdin);
+        len -= in;
+        out = 0;
+        while (out < in && !ferror(stdout)) {
+            out += fwrite(&byte_buffer[out], 1, in - out, stdout);
+        }
     }
 }
 
-void skip_bytes(int textLength)
+void skip_bytes(int len)
 {
-    int i;
-    for (i = 0; i < textLength; i++) {
-        fgetc(stdin);
-        if (feof(stdin))
-            break;
+    int in;
+    while (len > 0 && !feof(stdin)) {
+        in = len < 4096 ? len : 4096;
+        in = fread(byte_buffer, in, 1, stdin);
+        len -= in;
     }
 }
 
