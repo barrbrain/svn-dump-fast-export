@@ -306,10 +306,10 @@ void repo_copy(uint32_t revision, char *src, char *dst)
                       0);
 }
 
-void repo_add(char *path, uint32_t blob_mark)
+void repo_add(char *path, uint32_t mode, uint32_t blob_mark)
 {
     fprintf(stderr, "A %s %d\n", path, blob_mark);
-    repo_write_dirent(path, REPO_MODE_BLB, blob_mark, 0);
+    repo_write_dirent(path, mode, blob_mark, 0);
 }
 
 void repo_modify(char *path, uint32_t blob_mark)

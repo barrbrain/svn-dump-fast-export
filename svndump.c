@@ -45,11 +45,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include "svndump.h"
-
-/*
- * Date format:
- * "yyyy-MM-dd'T'HH:mm:ss"
- */
+#include "repo_tree.h"
 
 /*
  * create dump representation by importing dump file
@@ -64,7 +60,7 @@ void svndump_read(void)
         return;
 
     do {
-        svnrev_read(atoi(&t[17]) + 1);
+        svnrev_read(atoi(&t[17]));
         t = svndump_read_line();
     } while (t && strlen(t) && !feof(stdin));
 }
@@ -74,7 +70,6 @@ void svndump_read(void)
  * return all characters except the newline
  */
 static char line_buffer[10000];
-static char *lastLine = NULL;
 static int line_buffer_len = 0;
 static int line_len = 0;
 
@@ -83,12 +78,6 @@ char *svndump_read_line(void)
     char *res;
     char *end;
     int n_read;
-
-    if (lastLine) {
-        res = lastLine;
-        lastLine = NULL;
-        return res;
-    }
 
     if (line_len) {
         memmove(line_buffer, &line_buffer[line_len],
@@ -109,11 +98,12 @@ char *svndump_read_line(void)
 
     if (end != NULL) {
         line_len = end - line_buffer;
+        line_buffer[line_len++] = '\0';
     } else {
-        line_len = line_buffer_len++;
+        line_len = line_buffer_len;
+        line_buffer[line_buffer_len] = '\0';
     }
 
-    line_buffer[line_len++] = '\0';
 
     return line_buffer;
 }
@@ -122,9 +112,14 @@ char *svndump_read_line(void)
  * so a line can be pushed-back after read
  */
 
-void svndump_pushBackInputLine(char *input)
+void svndump_pushBackInputLine()
 {
-    lastLine = input;
+    if (line_len) {
+        if (line_buffer[line_len - 1] == '\0')
+            line_buffer[line_len - 1] = '\n';
+        line_buffer[line_buffer_len] = '\0';
+        line_len = 0;
+    }
 }
 
 int strendswith(char *s, char *end)
@@ -146,7 +141,7 @@ char *svndump_read_string(int len)
         line_len += offset;
     }
     while (offset < len && !feof(stdin)) {
-        offset += fread(&s[offset], len - offset, 1, stdin);
+        offset += fread(&s[offset], 1, len - offset, stdin);
     }
     s[offset] = '\0';
     return s;
@@ -191,7 +186,7 @@ void skip_bytes(int len)
     }
     while (len > 0 && !feof(stdin)) {
         in = len < 4096 ? len : 4096;
-        in = fread(byte_buffer, in, 1, stdin);
+        in = fread(byte_buffer, 1, in, stdin);
         len -= in;
     }
 }
@@ -279,7 +274,7 @@ void svnnode_read(char *fname)
     }
     t = svndump_read_line();
     if (t && !strlen(t))
-        svndump_pushBackInputLine(t);
+        svndump_pushBackInputLine();
 
     if (action == NODEACT_DELETE) {
         repo_delete(dst);
@@ -291,7 +286,9 @@ void svnnode_read(char *fname)
         }
     } else if (action == NODEACT_ADD) {
         if (mark) {
-            repo_add(dst, mark);
+            repo_add(dst,
+                     type == NODEKIND_DIR ? REPO_MODE_DIR : REPO_MODE_BLB,
+                     mark);
         } else if (src) {
             repo_copy(srcRev, src, dst);
         }
@@ -342,15 +339,15 @@ void svnrev_read(uint32_t number)
             val = svndump_read_string(len);
             if (strendswith(key, ":log")) {
                 descr = val;
-                fprintf(stderr, "Log: %d\n", descr);
+                fprintf(stderr, "Log: %s\n", descr);
             } else if (strendswith(key, ":author")) {
                 author = val;
-                fprintf(stderr, "Author: %d\n", author);
+                fprintf(stderr, "Author: %s\n", author);
             } else if (strendswith(key, ":date")) {
                 date = val;
+                fprintf(stderr, "Date: %s\n", date);
                 strptime(date, "%FT%T", &tm);
                 timestamp = mktime(&tm);
-                fprintf(stderr, "Date: %d\n", date);
             }
             key = "";
             svndump_read_line();
@@ -373,14 +370,18 @@ void svnrev_read(uint32_t number)
         } while (t && !strlen(t));
     }
     if (t && strlen(t))
-        svndump_pushBackInputLine(t);
+        svndump_pushBackInputLine();
+
+    if (!number)
+        return;
 
     repo_commit(number);
     printf
         ("commit refs/heads/master\nmark :%d\ncommitter %s <%s@local> %d +0000\n",
          number, author, author, time(&timestamp));
     printf("data %d\n%s\n", strlen(descr), descr);
-    repo_diff(number - 1, number);
+    printf("deleteall\n");
+    repo_diff(0, number);
     fputc('\n', stdout);
 
     printf("progress Imported commit %d.\n\n", number);
