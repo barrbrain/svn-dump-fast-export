@@ -74,11 +74,14 @@ void svndump_read(void)
  */
 static char line_buffer[10000];
 static char *lastLine = NULL;
+static int line_buffer_len = 0;
+static int line_len = 0;
 
 char *svndump_read_line(void)
 {
-    int len;
     char *res;
+    char *end;
+    int n_read;
 
     if (lastLine) {
         res = lastLine;
@@ -86,15 +89,32 @@ char *svndump_read_line(void)
         return res;
     }
 
-    res = fgets(line_buffer, 10000, stdin);
-
-    if (res) {
-        len = strlen(res);
-
-        if (len && res[len - 1] == '\n')
-            res[len - 1] = '\0';
+    if (line_len) {
+        memmove(line_buffer, &line_buffer[line_len],
+                line_buffer_len - line_len);
+        line_buffer_len -= line_len;
+        line_len = 0;
     }
-    return res;
+
+    end = memchr(line_buffer, '\n', line_buffer_len);
+    while (line_buffer_len < 9999 && !feof(stdin) && NULL == end) {
+        n_read = fread(line_buffer, 1, 9999 - line_buffer_len, stdin);
+        end = memchr(&line_buffer[line_buffer_len], '\n', n_read);
+        line_buffer_len += n_read;
+    }
+
+    if (ferror(stdin))
+        return NULL;
+
+    if (end != NULL) {
+        line_len = end - line_buffer;
+    } else {
+        line_len = line_buffer_len++;
+    }
+
+    line_buffer[line_len++] = '\0';
+
+    return line_buffer;
 }
 
 /*
@@ -117,9 +137,16 @@ char *svndump_read_string(int len)
 {
     char *s = malloc(len + 1);
     int offset = 0;
-    do {
+    if (line_buffer_len > line_len) {
+        offset = line_buffer_len - line_len;
+        if (offset > len)
+            offset = len;
+        memcpy(s, &line_buffer[line_len], offset);
+        line_len += offset;
+    }
+    while (offset < len && !feof(stdin)) {
         offset += fread(&s[offset], len - offset, 1, stdin);
-    } while (offset < len && !feof(stdin));
+    }
     s[offset] = '\0';
     return s;
 }
@@ -128,6 +155,18 @@ char byte_buffer[4096];
 void copy_bytes(int len)
 {
     int in, out;
+    if (line_buffer_len > line_len) {
+        in = line_buffer_len - line_len;
+        if (in > len)
+            in = len;
+        out = 0;
+        while (out < in && !ferror(stdout)) {
+            out +=
+                fwrite(&line_buffer[line_len + out], 1, in - out, stdout);
+        }
+        len -= in;
+        line_len += in;
+    }
     while (len > 0 && !feof(stdin)) {
         in = len < 4096 ? len : 4096;
         in = fread(byte_buffer, 1, in, stdin);
@@ -142,6 +181,13 @@ void copy_bytes(int len)
 void skip_bytes(int len)
 {
     int in;
+    if (line_buffer_len > line_len) {
+        in = line_buffer_len - line_len;
+        if (in > len)
+            in = len;
+        line_len += in;
+        len -= in;
+    }
     while (len > 0 && !feof(stdin)) {
         in = len < 4096 ? len : 4096;
         in = fread(byte_buffer, in, 1, stdin);
