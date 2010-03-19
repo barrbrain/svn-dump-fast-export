@@ -43,6 +43,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include "svndump.h"
 
 /*
@@ -309,6 +310,8 @@ void svnnode_read(char *fname)
  */
 void svnrev_read(uint32_t number)
 {
+    struct tm tm;
+    time_t timestamp;
     char *descr = "";
     char *author = "nobody";
     char *date = "now";
@@ -345,6 +348,8 @@ void svnrev_read(uint32_t number)
                 fprintf(stderr, "Author: %d\n", author);
             } else if (strendswith(key, ":date")) {
                 date = val;
+                strptime(date, "%FT%T", &tm);
+                timestamp = mktime(&tm);
                 fprintf(stderr, "Date: %d\n", date);
             }
             key = "";
@@ -372,8 +377,8 @@ void svnrev_read(uint32_t number)
 
     repo_commit(number);
     printf
-        ("commit refs/heads/master\nmark :%d\ncommitter %s <%s@local> %s\n",
-         number, author, author, date);
+        ("commit refs/heads/master\nmark :%d\ncommitter %s <%s@local> %d +0000\n",
+         number, author, author, time(&timestamp));
     printf("data %d\n%s\n", strlen(descr), descr);
     repo_diff(number - 1, number);
     fputc('\n', stdout);
