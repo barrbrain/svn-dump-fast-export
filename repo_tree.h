@@ -59,9 +59,9 @@ struct repo_dir_gc_s {
     repo_dir_t dir;
 };
 
-typedef struct repo_commit_s repo_commit_t;
+typedef struct repo_revision_s repo_revision_t;
 
-struct repo_commit_s {
+struct repo_revision_s {
     uint32_t mark;
     uint32_t root_dir_offset;
 };
@@ -69,7 +69,7 @@ struct repo_commit_s {
 typedef struct repo_s repo_t;
 
 struct repo_s {
-    repo_commit_t *commits;
+    repo_revision_t *commits;
     repo_dir_t *dirs;
     repo_dirent_t *dirents;
     repo_dir_gc_t *gc_dirs;
