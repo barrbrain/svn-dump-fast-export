@@ -35,35 +35,35 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#define OBJ_POOL_INITIAL_CAPACITY 4096
-
-typedef char obj_t;
-
-typedef struct obj_pool_s obj_pool_t;
-
-struct obj_pool_s {
-    uint32_t size;
-    uint32_t capacity;
-    obj_t *base;
-};
-
-static obj_pool_t obj_pool = (obj_pool_t) { 0, 0, NULL };
-
-static uint32_t obj_alloc(uint32_t count)
-{
-    uint32_t offset;
-    if (obj_pool.size + count > obj_pool.capacity) {
-        if (obj_pool.capacity) {
-            obj_pool.capacity *= 2;
-        } else {
-            obj_pool.capacity = OBJ_POOL_INITIAL_CAPACITY;
-        }
-        obj_pool.base =
-            realloc(obj_pool.base, obj_pool.capacity * sizeof(obj_t));
-    }
-    offset = obj_pool.size;
-    obj_pool.size += count;
-    return offset;
-}
+#define obj_pool_gen(pre, obj_t, initial_capacity)                         \
+static struct {                                                            \
+    uint32_t size;                                                         \
+    uint32_t capacity;                                                     \
+    obj_t *base;                                                           \
+} pre##_pool = { 0, 0, NULL};                                              \
+static uint32_t pre##_alloc(uint32_t count)                                \
+{                                                                          \
+    uint32_t offset;                                                       \
+    if (pre##_pool.size + count > pre##_pool.capacity) {                   \
+        if (pre##_pool.capacity) {                                         \
+            pre##_pool.capacity *= 2;                                      \
+        } else {                                                           \
+            pre##_pool.capacity = initial_capacity;                        \
+        }                                                                  \
+        pre##_pool.base =                                                  \
+            realloc(pre##_pool.base, pre##_pool.capacity * sizeof(obj_t)); \
+    }                                                                      \
+    offset = pre##_pool.size;                                              \
+    pre##_pool.size += count;                                              \
+    return offset;                                                         \
+}                                                                          \
+static uint32_t pre##_offset(obj_t * obj)                                  \
+{                                                                          \
+    return obj == NULL ? ~0 : obj - pre##_pool.base;                       \
+}                                                                          \
+static obj_t *obj_pointer(uint32_t offset)                                 \
+{                                                                          \
+    return offset == ~0 ? NULL : &pre##_pool.base[offset];                 \
+}                                                                          \
 
 #endif
