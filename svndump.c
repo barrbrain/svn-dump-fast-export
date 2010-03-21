@@ -88,7 +88,7 @@ char *svndump_read_line(void)
 
     end = memchr(line_buffer, '\n', line_buffer_len);
     while (line_buffer_len < 9999 && !feof(stdin) && NULL == end) {
-        n_read = fread(line_buffer, 1, 9999 - line_buffer_len, stdin);
+        n_read = fread(&line_buffer[line_buffer_len], 1, 9999 - line_buffer_len, stdin);
         end = memchr(&line_buffer[line_buffer_len], '\n', n_read);
         line_buffer_len += n_read;
     }
@@ -380,8 +380,7 @@ void svnrev_read(uint32_t number)
         ("commit refs/heads/master\nmark :%d\ncommitter %s <%s@local> %d +0000\n",
          number, author, author, time(&timestamp));
     printf("data %d\n%s\n", strlen(descr), descr);
-    printf("deleteall\n");
-    repo_diff(0, number);
+    repo_diff(number - 1, number);
     fputc('\n', stdout);
 
     printf("progress Imported commit %d.\n\n", number);
