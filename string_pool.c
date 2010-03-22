@@ -52,7 +52,7 @@ typedef trp(node_t) tree_t;
 
 static tree_t tree = { NULL };
 
-obj_pool_gen(node, node_t, 4096);
+obj_pool_gen(node, node_t, 32768);
 obj_pool_gen(string, char, 4096);
 
 static char *node_value(node_t * node)

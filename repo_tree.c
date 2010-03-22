@@ -140,10 +140,10 @@ static repo_dir_t *repo_clone_dir(repo_dir_t * orig_dir, uint32_t padding)
 
 static repo_dirent_t *repo_read_dirent(uint32_t revision, char *path)
 {
-    char *ctx;
-    uint32_t name;
-    repo_dir_t *dir;
-    repo_dirent_t *dirent;
+    char *ctx = NULL;
+    uint32_t name = 0;
+    repo_dir_t *dir = NULL;
+    repo_dirent_t *dirent = NULL;
     dir = repo_commit_root_dir(commit_pointer(revision));
     for (name = pool_tok_r(path, "/", &ctx);
          name; name = pool_tok_r(NULL, "/", &ctx)) {

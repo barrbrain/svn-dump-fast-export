@@ -112,7 +112,7 @@ char *svndump_read_line(void)
         line_buffer[line_buffer_len] = '\0';
     }
 
-    if (line_len == 0 && feof(stdin))
+    if (line_len == 0)
         return NULL;
 
     return line_buffer;
