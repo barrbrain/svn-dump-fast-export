@@ -47,6 +47,12 @@
 #include "svndump.h"
 #include "repo_tree.h"
 
+int main(int argc, char **argv)
+{
+    svndump_read();
+    return 0;
+}
+
 /*
  * create dump representation by importing dump file
  */
@@ -62,7 +68,7 @@ void svndump_read(void)
     do {
         svnrev_read(atoi(&t[17]));
         t = svndump_read_line();
-    } while (t && strlen(t) && !feof(stdin));
+    } while (t && strlen(t));
 }
 
 /*
@@ -372,10 +378,11 @@ void svnrev_read(uint32_t number)
     if (t && strlen(t))
         svndump_pushBackInputLine();
 
+    repo_commit(number);
+
     if (!number)
         return;
 
-    repo_commit(number);
     printf
         ("commit refs/heads/master\nmark :%d\ncommitter %s <%s@local> %d +0000\n",
          number, author, author, time(&timestamp));

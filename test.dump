@@ -1,0 +1,134 @@
+SVN-fs-dump-format-version: 2
+
+UUID: 3bd6fa69-4b2d-4852-8da1-81cb0f847b4a
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2010-03-22T11:01:43.861130Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 115
+Content-length: 115
+
+K 7
+svn:log
+V 15
+Initial commit.
+K 10
+svn:author
+V 5
+david
+K 8
+svn:date
+V 27
+2010-03-22T11:03:45.284750Z
+PROPS-END
+
+Node-path: test.txt
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 14
+Text-content-md5: 54098b367d2e87b078671fad4afb9dbb
+Text-content-sha1: 01ba98b3c90126f14577d5b1fdb1ffe9d3364469
+Content-length: 24
+
+PROPS-END
+Hello, world.
+
+
+Revision-number: 2
+Prop-content-length: 113
+Content-length: 113
+
+K 7
+svn:log
+V 13
+Moved a file.
+K 10
+svn:author
+V 5
+david
+K 8
+svn:date
+V 27
+2010-03-22T11:04:21.082847Z
+PROPS-END
+
+Node-path: subdir
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: subdir/test.txt
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 1
+Node-copyfrom-path: test.txt
+Text-copy-source-md5: 54098b367d2e87b078671fad4afb9dbb
+Text-copy-source-sha1: 01ba98b3c90126f14577d5b1fdb1ffe9d3364469
+
+
+Node-path: test.txt
+Node-action: delete
+
+
+Revision-number: 3
+Prop-content-length: 114
+Content-length: 114
+
+K 7
+svn:log
+V 14
+Copied a file.
+K 10
+svn:author
+V 5
+david
+K 8
+svn:date
+V 27
+2010-03-22T11:05:05.577909Z
+PROPS-END
+
+Node-path: subdir/test2.txt
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: subdir/test.txt
+Text-copy-source-md5: 54098b367d2e87b078671fad4afb9dbb
+Text-copy-source-sha1: 01ba98b3c90126f14577d5b1fdb1ffe9d3364469
+
+
+Revision-number: 4
+Prop-content-length: 115
+Content-length: 115
+
+K 7
+svn:log
+V 15
+Deleted a file.
+K 10
+svn:author
+V 5
+david
+K 8
+svn:date
+V 27
+2010-03-22T11:05:26.148953Z
+PROPS-END
+
+Node-path: subdir/test.txt
+Node-action: delete
+
+
