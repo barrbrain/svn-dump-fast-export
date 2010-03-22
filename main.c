@@ -9,7 +9,6 @@
 int main(int argc, char **argv)
 {
     repo_init(30000, 100000, 100, 100000);
-    pool_init(300000, 30000);
     svndump_read();
     return 0;
 }

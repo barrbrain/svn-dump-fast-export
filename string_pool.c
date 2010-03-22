@@ -38,6 +38,7 @@
 #define NDEBUG
 #include <assert.h>
 #include "trp.h"
+#include "obj_pool.h"
 #include "string_pool.h"
 
 typedef struct node_s node_t;
@@ -49,21 +50,14 @@ struct node_s {
 
 typedef trp(node_t) tree_t;
 
-struct pool_s {
-    uint32_t size;
-    uint32_t max_size;
-    uint32_t entries;
-    uint32_t max_entries;
-    char *data;
-    node_t *index;
-    tree_t tree;
-};
+static tree_t tree = { NULL };
 
-static struct pool_s *pool;
+obj_pool_gen(node, node_t, 4096);
+obj_pool_gen(string, char, 4096);
 
 static char *node_value(node_t * node)
 {
-    return &(pool->data[node->offset]);
+    return string_pointer(node->offset);
 }
 
 static int node_value_cmp(node_t * a, node_t * b)
@@ -78,52 +72,30 @@ static int node_indentity_cmp(node_t * a, node_t * b)
         - (((uintptr_t) a) < ((uintptr_t) b));
 }
 
-trp_gen(static, tree_, tree_t, node_t, children, pool->index,
+trp_gen(static, tree_, tree_t, node_t, children, node_pool.base,
         node_indentity_cmp);
-
-void pool_init(uint32_t max_size, uint32_t max_entries)
-{
-    pool = malloc(sizeof(*pool));
-    pool->data = malloc(max_size);
-    pool->size = 0;
-    pool->max_size = max_size;
-    pool->index = malloc(max_entries * sizeof(node_t));
-    // First entry is reserved for NULL
-    pool->entries = 1;
-    pool->max_entries = max_entries;
-    tree_new(&pool->tree, 42);
-}
 
 char *pool_fetch(uint32_t entry)
 {
-    return node_value(&pool->index[entry]);
+    return node_value(node_pointer(entry - 1));
 }
 
 uint32_t pool_intern(char *key)
 {
-    uint32_t key_len = strlen(key) + 1;
-    node_t *node = NULL;
     node_t *match = NULL;
-    if (pool->entries == pool->max_entries) {
-        pool->max_entries *= 2;
-        pool->index =
-            realloc(pool->index, pool->max_entries * sizeof(node_t));
-    }
-    node = &pool->index[pool->entries];
-    node->offset = pool->size;
-    if (pool->size + key_len > pool->max_size) {
-        pool->max_size *= 2;
-        pool->data = realloc(pool->data, pool->max_size);
-    }
+    uint32_t key_len = strlen(key) + 1;
+    node_t *node = node_pointer(node_alloc(1));
+    node->offset = string_alloc(key_len);
     strcpy(node_value(node), key);
-    match = tree_psearch(&pool->tree, node);
+    match = tree_psearch(&tree, node);
     if (!match || node_value_cmp(node, match)) {
-        tree_insert(&pool->tree, node);
-        pool->size += strlen(key) + 1;
-        return pool->entries++;
+        tree_insert(&tree, node);
+        match = node;
     } else {
-        return match - pool->index;
+        node_free(1);
+        string_free(key_len);
     }
+    return node_offset(match) + 1;
 }
 
 uint32_t pool_tok_r(char *str, const char *delim, char **saveptr)

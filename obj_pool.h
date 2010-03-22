@@ -57,11 +57,15 @@ static uint32_t pre##_alloc(uint32_t count)                                \
     pre##_pool.size += count;                                              \
     return offset;                                                         \
 }                                                                          \
+static void pre##_free(uint32_t count)                                     \
+{                                                                          \
+    pre##_pool.size -= count;                                              \
+}                                                                          \
 static uint32_t pre##_offset(obj_t * obj)                                  \
 {                                                                          \
     return obj == NULL ? ~0 : obj - pre##_pool.base;                       \
 }                                                                          \
-static obj_t *obj_pointer(uint32_t offset)                                 \
+static obj_t *pre##_pointer(uint32_t offset)                               \
 {                                                                          \
     return offset == ~0 ? NULL : &pre##_pool.base[offset];                 \
 }                                                                          \
