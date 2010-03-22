@@ -59,36 +59,12 @@ struct repo_dir_gc_s {
     repo_dir_t dir;
 };
 
-typedef struct repo_revision_s repo_revision_t;
+typedef struct repo_commit_s repo_commit_t;
 
-struct repo_revision_s {
+struct repo_commit_s {
     uint32_t mark;
     uint32_t root_dir_offset;
 };
-
-typedef struct repo_s repo_t;
-
-struct repo_s {
-    repo_revision_t *commits;
-    repo_dir_t *dirs;
-    repo_dirent_t *dirents;
-    repo_dir_gc_t *gc_dirs;
-    uint32_t num_commits;
-    uint32_t max_commits;
-    uint32_t num_dirs;
-    uint32_t num_dirs_saved;
-    uint32_t max_dirs;
-    uint32_t num_dirents;
-    uint32_t num_dirents_saved;
-    uint32_t max_dirents;
-    uint32_t num_gc_dirs;
-    uint32_t max_gc_dirs;
-    uint32_t active_commit;
-};
-
-void
-repo_init(uint32_t max_commits, uint32_t max_dirs,
-          uint32_t max_gc_dirs, uint32_t max_dirents);
 
 void repo_copy(uint32_t revision, char *src, char *dst);
 

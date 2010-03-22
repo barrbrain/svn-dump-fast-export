@@ -32,8 +32,6 @@
 #ifndef STRING_POOL_H_
 #define	STRING_POOL_H_
 
-void pool_init(uint32_t max_size, uint32_t max_entries);
-
 char *pool_fetch(uint32_t entry);
 
 uint32_t pool_intern(char *key);

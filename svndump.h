@@ -98,6 +98,7 @@
 
 char *svndump_read_line(void);
 
+void svndump_read(void);
 
 void svnrev_read(uint32_t revision_id);
 

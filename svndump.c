@@ -47,6 +47,12 @@
 #include "svndump.h"
 #include "repo_tree.h"
 
+int main(int argc, char **argv)
+{
+    svndump_read();
+    return 0;
+}
+
 /*
  * create dump representation by importing dump file
  */
@@ -62,7 +68,7 @@ void svndump_read(void)
     do {
         svnrev_read(atoi(&t[17]));
         t = svndump_read_line();
-    } while (t && strlen(t) && !feof(stdin));
+    } while (t && !strncmp(t, "Revision-number:", 16));
 }
 
 /*
@@ -88,7 +94,9 @@ char *svndump_read_line(void)
 
     end = memchr(line_buffer, '\n', line_buffer_len);
     while (line_buffer_len < 9999 && !feof(stdin) && NULL == end) {
-        n_read = fread(line_buffer, 1, 9999 - line_buffer_len, stdin);
+        n_read =
+            fread(&line_buffer[line_buffer_len], 1, 9999 - line_buffer_len,
+                  stdin);
         end = memchr(&line_buffer[line_buffer_len], '\n', n_read);
         line_buffer_len += n_read;
     }
@@ -104,6 +112,8 @@ char *svndump_read_line(void)
         line_buffer[line_buffer_len] = '\0';
     }
 
+    if (line_len == 0)
+        return NULL;
 
     return line_buffer;
 }
@@ -372,16 +382,16 @@ void svnrev_read(uint32_t number)
     if (t && strlen(t))
         svndump_pushBackInputLine();
 
+    repo_commit(number);
+
     if (!number)
         return;
 
-    repo_commit(number);
     printf
         ("commit refs/heads/master\nmark :%d\ncommitter %s <%s@local> %d +0000\n",
          number, author, author, time(&timestamp));
     printf("data %d\n%s\n", strlen(descr), descr);
-    printf("deleteall\n");
-    repo_diff(0, number);
+    repo_diff(number - 1, number);
     fputc('\n', stdout);
 
     printf("progress Imported commit %d.\n\n", number);
