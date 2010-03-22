@@ -44,7 +44,7 @@ static struct {                                                            \
 static uint32_t pre##_alloc(uint32_t count)                                \
 {                                                                          \
     uint32_t offset;                                                       \
-    if (pre##_pool.size + count > pre##_pool.capacity) {                   \
+    while (pre##_pool.size + count > pre##_pool.capacity) {                \
         if (pre##_pool.capacity) {                                         \
             pre##_pool.capacity *= 2;                                      \
         } else {                                                           \
