@@ -57,7 +57,7 @@ obj_pool_gen(string, char, 4096);
 
 static char *node_value(node_t * node)
 {
-    return string_pointer(node->offset);
+    return node ? string_pointer(node->offset) : NULL;
 }
 
 static int node_value_cmp(node_t * a, node_t * b)

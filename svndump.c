@@ -68,7 +68,7 @@ void svndump_read(void)
     do {
         svnrev_read(atoi(&t[17]));
         t = svndump_read_line();
-    } while (t && strlen(t));
+    } while (t && !strncmp(t, "Revision-number:", 16));
 }
 
 /*
@@ -94,7 +94,9 @@ char *svndump_read_line(void)
 
     end = memchr(line_buffer, '\n', line_buffer_len);
     while (line_buffer_len < 9999 && !feof(stdin) && NULL == end) {
-        n_read = fread(&line_buffer[line_buffer_len], 1, 9999 - line_buffer_len, stdin);
+        n_read =
+            fread(&line_buffer[line_buffer_len], 1, 9999 - line_buffer_len,
+                  stdin);
         end = memchr(&line_buffer[line_buffer_len], '\n', n_read);
         line_buffer_len += n_read;
     }
@@ -110,6 +112,8 @@ char *svndump_read_line(void)
         line_buffer[line_buffer_len] = '\0';
     }
 
+    if (line_len == 0 && feof(stdin))
+        return NULL;
 
     return line_buffer;
 }

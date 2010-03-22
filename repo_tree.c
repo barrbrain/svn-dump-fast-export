@@ -191,8 +191,7 @@ repo_write_dirent(char *path, uint32_t mode, uint32_t content_offset,
             dirent_o = dirent_offset(dirent);
             dir = repo_clone_dir(dir, 0);
             if (dirent_o != ~0)
-                dirent_pointer(dirent_o)->content_offset =
-                    dir_offset(dir);
+                dirent_pointer(dirent_o)->content_offset = dir_offset(dir);
         } else {
             dirent->mode = REPO_MODE_DIR;
             dirent_o = dirent_offset(dirent);
@@ -307,8 +306,7 @@ static void repo_gc_dirs(void)
 {
     uint32_t i;
     repo_dir_gc_t *gc_dir;
-    repo_commit_t *commit =
-        commit_pointer(active_commit);
+    repo_commit_t *commit = commit_pointer(active_commit);
     repo_dir_t *root = repo_commit_root_dir(commit);
     gc_dir_pool.size = 0;
     repo_gc_mark_dirs(root);
@@ -317,12 +315,12 @@ static void repo_gc_dirs(void)
     repo_gc_dirents();
     gc_dir = repo_gc_find_by_src(commit->root_dir_offset);
     commit->root_dir_offset =
-        gc_dir == NULL ? 0 :
-        (gc_dir_offset(gc_dir) + num_dirs_saved);
+        gc_dir == NULL ? 0 : (gc_dir_offset(gc_dir) + num_dirs_saved);
     for (i = num_dirents_saved; i < dirent_pool.size; i++) {
         if (repo_dirent_is_dir(dirent_pointer(i)) &&
             dirent_pointer(i)->content_offset >= num_dirs_saved) {
-            gc_dir = repo_gc_find_by_src(dirent_pointer(i)->content_offset);
+            gc_dir =
+                repo_gc_find_by_src(dirent_pointer(i)->content_offset);
             if (gc_dir) {
                 dirent_pointer(i)->content_offset =
                     gc_dir_offset(gc_dir) + num_dirs_saved;
@@ -342,8 +340,8 @@ void repo_commit(uint32_t revision)
     fprintf(stderr, "R %d\n", revision);
     if (revision == 0) {
         active_commit = commit_alloc(1);
-        commit_pointer(active_commit)->root_dir_offset = 
-             dir_with_dirents_alloc(0);
+        commit_pointer(active_commit)->root_dir_offset =
+            dir_with_dirents_alloc(0);
     } else {
         repo_gc_dirs();
     }
