@@ -163,11 +163,10 @@ static void
 repo_write_dirent(char *path, uint32_t mode, uint32_t content_offset,
                   uint32_t del)
 {
-    char *ctx, *end;
+    char *ctx;
     uint32_t name, revision, dirent_o, dir_o, parent_dir_o;
     repo_dir_t *dir;
     repo_dirent_t *dirent = NULL;
-    end = path + strlen(path);
     revision = active_commit;
     dir = repo_commit_root_dir(commit_pointer(revision));
     dir = repo_clone_dir(dir, 0);
@@ -201,15 +200,16 @@ repo_write_dirent(char *path, uint32_t mode, uint32_t content_offset,
             dirent->content_offset = dir_o;
         }
     }
-    if (del)
-        dirent->name_offset = ~0;
-    dirent->mode = mode;
-    dirent->content_offset = content_offset;
-    if (del) {
-        dir = dir_pointer(parent_dir_o);
-        qsort(repo_first_dirent(dir), dir->size,
-              sizeof(repo_dirent_t), repo_dirent_name_cmp);
-        dir->size--;
+    if (dirent) {
+        dirent->mode = mode;
+        dirent->content_offset = content_offset;
+        if (del && ~parent_dir_o) {
+            dirent->name_offset = ~0;
+            dir = dir_pointer(parent_dir_o);
+            qsort(repo_first_dirent(dir), dir->size,
+                  sizeof(repo_dirent_t), repo_dirent_name_cmp);
+            dir->size--;
+        }
     }
 }
 

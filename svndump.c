@@ -213,11 +213,11 @@ uint32_t next_blob_mark(void)
 void svnnode_read(char *fname)
 {
     int type = NODEKIND_UNKNOWN;
-    int action;
+    int action = NODEACT_UNKNOWN;
     int propLength = 0;
     int textLength = 0;
     char *src = NULL;
-    int srcRev;
+    int srcRev = 0;
     char *dst = strdup(fname);
     char *t;
     char *val;
@@ -291,7 +291,7 @@ void svnnode_read(char *fname)
     } else if (action == NODEACT_CHANGE) {
         if (mark) {
             repo_modify(dst, mark);
-        } else if (src) {
+        } else if (src && srcRev) {
             repo_copy(srcRev, src, dst);
         }
     } else if (action == NODEACT_ADD) {
