@@ -37,35 +37,6 @@
 #define REPO_MODE_EXE 0100755
 #define REPO_MODE_LNK 0120000
 
-typedef struct repo_dirent_s repo_dirent_t;
-
-struct repo_dirent_s {
-    uint32_t name_offset;
-    uint32_t mode;
-    uint32_t content_offset;
-};
-
-typedef struct repo_dir_s repo_dir_t;
-
-struct repo_dir_s {
-    uint32_t size;
-    uint32_t first_offset;
-};
-
-typedef struct repo_dir_gc_s repo_dir_gc_t;
-
-struct repo_dir_gc_s {
-    uint32_t offset;
-    repo_dir_t dir;
-};
-
-typedef struct repo_commit_s repo_commit_t;
-
-struct repo_commit_s {
-    uint32_t mark;
-    uint32_t root_dir_offset;
-};
-
 void repo_copy(uint32_t revision, char *src, char *dst);
 
 void repo_add(char *path, uint32_t mode, uint32_t blob_mark);

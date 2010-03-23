@@ -38,6 +38,35 @@
 #include "repo_tree.h"
 #include "obj_pool.h"
 
+typedef struct repo_dirent_s repo_dirent_t;
+
+struct repo_dirent_s {
+    uint32_t name_offset;
+    uint32_t mode;
+    uint32_t content_offset;
+};
+
+typedef struct repo_dir_s repo_dir_t;
+
+struct repo_dir_s {
+    uint32_t size;
+    uint32_t first_offset;
+};
+
+typedef struct repo_dir_gc_s repo_dir_gc_t;
+
+struct repo_dir_gc_s {
+    uint32_t offset;
+    repo_dir_t dir;
+};
+
+typedef struct repo_commit_s repo_commit_t;
+
+struct repo_commit_s {
+    uint32_t mark;
+    uint32_t root_dir_offset;
+};
+
 obj_pool_gen(commit, repo_commit_t, 4096);
 obj_pool_gen(dir, repo_dir_t, 4096);
 obj_pool_gen(gc_dir, repo_dir_gc_t, 4096);
