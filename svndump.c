@@ -323,7 +323,7 @@ static void svnnode_read(char *fname)
             repo_add(dst, REPO_MODE_DIR, 0);
         } else {
             mark = next_blob_mark();
-            repo_add(dst, REPO_MODE_BLB, 0);
+            repo_add(dst, REPO_MODE_BLB, mark);
         }
     }
 

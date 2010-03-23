@@ -161,7 +161,7 @@ static repo_dirent_t *repo_read_dirent(uint32_t revision, char *path)
     repo_dirent_t *dirent = NULL;
     dir = repo_commit_root_dir(commit_pointer(revision));
     for (name = pool_tok_r(path, "/", &ctx);
-         name; name = pool_tok_r(NULL, "/", &ctx)) {
+         ~name; name = pool_tok_r(NULL, "/", &ctx)) {
         dirent = repo_dirent_by_name(dir, name);
         if (dirent == NULL) {
             return NULL;
@@ -186,7 +186,7 @@ repo_write_dirent(char *path, uint32_t mode, uint32_t content_offset,
     dir = repo_commit_root_dir(commit_pointer(revision));
     dir = repo_clone_dir(dir, 0);
     commit_pointer(revision)->root_dir_offset = dir_offset(dir);
-    for (name = pool_tok_r(path, "/", &ctx); name;
+    for (name = pool_tok_r(path, "/", &ctx); ~name;
          name = pool_tok_r(NULL, "/", &ctx)) {
         parent_dir_o = dir_offset(dir);
         dirent = repo_dirent_by_name(dir, name);

@@ -77,7 +77,7 @@ trp_gen(static, tree_, tree_t, node_t, children, node_pool.base,
 
 char *pool_fetch(uint32_t entry)
 {
-    return node_value(node_pointer(entry - 1));
+    return node_value(node_pointer(entry));
 }
 
 uint32_t pool_intern(char *key)
@@ -95,11 +95,11 @@ uint32_t pool_intern(char *key)
         node_free(1);
         string_free(key_len);
     }
-    return node_offset(match) + 1;
+    return node_offset(match);
 }
 
 uint32_t pool_tok_r(char *str, const char *delim, char **saveptr)
 {
     char *token = strtok_r(str, delim, saveptr);
-    return token ? pool_intern(token) : 0;
+    return token ? pool_intern(token) : ~0;
 }
