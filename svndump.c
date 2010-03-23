@@ -255,7 +255,7 @@ static void svnnode_read(char *fname)
     char *dst = strdup(fname);
     char *t;
     char *val;
-    uint32_t mark = 0;;
+    uint32_t mark = 0;
 
     fprintf(stderr, "Node path: %s\n", fname);
 
@@ -306,29 +306,33 @@ static void svnnode_read(char *fname)
     if (propLength) {
         skip_bytes(propLength);
     }
-    if (textLength) {
-        mark = next_blob_mark();
-        printf("blob\nmark :%d\ndata %d\n", mark, textLength);
-        copy_bytes(textLength);
-        fputc('\n', stdout);
-    }
 
     if (action == NODEACT_DELETE) {
         repo_delete(dst);
     } else if (action == NODEACT_CHANGE) {
-        if (mark) {
-            repo_modify(dst, mark);
-        } else if (src && srcRev) {
+        if (src && srcRev) {
             repo_copy(srcRev, src, dst);
+        } else {
+            mark = next_blob_mark();
+            repo_modify(dst, mark);
         }
     } else if (action == NODEACT_ADD) {
-        if (mark) {
-            repo_add(dst,
-                     type == NODEKIND_DIR ? REPO_MODE_DIR : REPO_MODE_BLB,
-                     mark);
-        } else if (src) {
+        if (src && srcRev) {
             repo_copy(srcRev, src, dst);
+        } else if (type == NODEKIND_DIR) {
+            repo_add(dst, REPO_MODE_DIR, 0);
+        } else {
+            mark = next_blob_mark();
+            repo_add(dst, REPO_MODE_BLB, 0);
         }
+    }
+
+    if (mark) {
+        printf("blob\nmark :%d\ndata %d\n", mark, textLength);
+        copy_bytes(textLength);
+        fputc('\n', stdout);
+    } else {
+        skip_bytes(textLength);
     }
 }
 
