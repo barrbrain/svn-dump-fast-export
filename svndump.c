@@ -393,9 +393,9 @@ static void svnrev_read(uint32_t number)
         return;
 
     printf("commit refs/heads/master\nmark :%d\n", number);
-    printf("committer %s <%s@local> %d +0000\n",
+    printf("committer %s <%s@local> %ld +0000\n",
          author, author, time(&timestamp));
-    printf("data %d\n%s\n", strlen(descr), descr);
+    printf("data %ld\n%s\n", strlen(descr), descr);
     repo_diff(number - 1, number);
     fputc('\n', stdout);
 
