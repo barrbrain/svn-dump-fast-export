@@ -58,17 +58,12 @@ int main(int argc, char **argv)
  */
 void svndump_read(void)
 {
-    char *t = svndump_read_line();
-    while (t && strncmp(t, "Revision-number:", 16))
-        t = svndump_read_line();
-
-    if (!t)
-        return;
-
-    do {
-        svnrev_read(atoi(&t[17]));
-        t = svndump_read_line();
-    } while (t && !strncmp(t, "Revision-number:", 16));
+    char *t;
+    for (t = svndump_read_line(); t; t = svndump_read_line()) {
+        if (!strncmp(t, "Revision-number:", 16)) {
+            svnrev_read(atoi(&t[17]));
+        }
+    } 
 }
 
 /*
@@ -225,12 +220,9 @@ void svnnode_read(char *fname)
 
     fprintf(stderr, "Node path: %s\n", fname);
 
-    t = svndump_read_line();
-
-    if (!t)
-        return;
-
-    do {
+    for (t = svndump_read_line();
+         t && *t;
+         t = svndump_read_line()) {
         if (!strncmp(t, "Node-kind:", 10)) {
             val = &t[11];
             if (!strncasecmp(val, "dir", 3))
@@ -270,8 +262,7 @@ void svnnode_read(char *fname)
             propLength = atoi(val);
             fprintf(stderr, "Prop content length: %d\n", propLength);
         }
-        t = svndump_read_line();
-    } while (t && strlen(t) && !feof(stdin));
+    }
 
     if (propLength) {
         skip_bytes(propLength);
@@ -282,9 +273,6 @@ void svnnode_read(char *fname)
         copy_bytes(textLength);
         fputc('\n', stdout);
     }
-    t = svndump_read_line();
-    if (t && !strlen(t))
-        svndump_pushBackInputLine();
 
     if (action == NODEACT_DELETE) {
         repo_delete(dst);
@@ -329,21 +317,13 @@ void svnrev_read(uint32_t number)
 
     fprintf(stderr, "Revision: %d\n", number);
 
-    /* skip rest of revision definition */
-    while (strlen(svndump_read_line()));
-
-    /* key-value pairs containing log, date etc. */
-    t = svndump_read_line();
-
-    if (!t)
-        return;
-
-    do {
+    for (t = svndump_read_line();
+         t && strncasecmp(t, "PROPS-END", 9);
+         t = svndump_read_line()) {
         if (!strncmp(t, "K ", 2)) {
             len = atoi(&t[2]);
             key = svndump_read_string(len);
             svndump_read_line();
-            t = svndump_read_line();
         } else if (!strncmp(t, "V ", 2)) {
             len = atoi(&t[2]);
             val = svndump_read_string(len);
@@ -361,25 +341,17 @@ void svnrev_read(uint32_t number)
             }
             key = "";
             svndump_read_line();
-            t = svndump_read_line();
-        } else {
-            t = svndump_read_line();
         }
-    } while (t && strlen(t) && strncasecmp(t, "PROPS-END", 9));
+    }
 
-    do {
-        t = svndump_read_line();
-    } while (t && (!strlen(t)));
-    while (t && strncmp(t, "Revision-number:", 16)) {
+    for ( ;
+         t && strncmp(t, "Revision-number:", 16);
+         t = svndump_read_line()) {
         if (!strncmp(t, "Node-path:", 10)) {
             svnnode_read(&t[11]);
         }
-
-        do {
-            t = svndump_read_line();
-        } while (t && !strlen(t));
     }
-    if (t && strlen(t))
+    if (t)
         svndump_pushBackInputLine();
 
     repo_commit(number);
@@ -387,9 +359,9 @@ void svnrev_read(uint32_t number)
     if (!number)
         return;
 
-    printf
-        ("commit refs/heads/master\nmark :%d\ncommitter %s <%s@local> %d +0000\n",
-         number, author, author, time(&timestamp));
+    printf("commit refs/heads/master\nmark :%d\n", number);
+    printf("committer %s <%s@local> %d +0000\n",
+         author, author, time(&timestamp));
     printf("data %d\n%s\n", strlen(descr), descr);
     repo_diff(number - 1, number);
     fputc('\n', stdout);
