@@ -53,13 +53,6 @@ struct repo_dir_s {
     uint32_t first_offset;
 };
 
-typedef struct repo_dir_gc_s repo_dir_gc_t;
-
-struct repo_dir_gc_s {
-    uint32_t offset;
-    repo_dir_t dir;
-};
-
 typedef struct repo_commit_s repo_commit_t;
 
 struct repo_commit_s {
@@ -69,7 +62,6 @@ struct repo_commit_s {
 
 obj_pool_gen(commit, repo_commit_t, 4096);
 obj_pool_gen(dir, repo_dir_t, 4096);
-obj_pool_gen(gc_dir, repo_dir_gc_t, 4096);
 obj_pool_gen(dirent, repo_dirent_t, 4096);
 
 static uint32_t num_dirs_saved = 0;
@@ -156,12 +148,6 @@ static repo_dir_t *repo_clone_dir(repo_dir_t * orig_dir, uint32_t padding)
     }
     memcpy(dirent_pointer(dirent_o), repo_first_dirent(orig_dir),
            orig_dir->size * sizeof(repo_dirent_t));
-    if (orig_o >= num_dirs_saved) {
-        bzero(repo_first_dirent(orig_dir),
-              orig_dir->size * sizeof(repo_dirent_t));
-    }
-    bzero(dirent_pointer(dirent_o + orig_dir->size),
-          padding * sizeof(repo_dirent_t));
     dir_pointer(new_o)->size = orig_dir->size + padding;
     dir_pointer(new_o)->first_offset = dirent_o;
     return dir_pointer(new_o);
@@ -271,99 +257,6 @@ void repo_delete(char *path)
     repo_write_dirent(path, 0, 0, 1);
 }
 
-static void repo_gc_mark_dirs(repo_dir_t * dir)
-{
-    uint32_t i, j, offset;
-    repo_dirent_t *dirent;
-    if (dir->size) {
-        offset = gc_dir_alloc(1);
-        gc_dir_pointer(offset)->offset = dir_offset(dir);
-        gc_dir_pointer(offset)->dir = *dir;
-    }
-    for (j = 0; j < dir->size; j++) {
-        dirent = &repo_first_dirent(dir)[j];
-        if (repo_dirent_is_dir(dirent) &&
-            dirent->content_offset >= num_dirs_saved) {
-            repo_gc_mark_dirs(repo_dir_from_dirent(dirent));
-        }
-    }
-}
-
-static int repo_gc_dir_offset_cmp(const void *a, const void *b)
-{
-    return (((repo_dir_gc_t *) a)->dir.first_offset
-            > ((repo_dir_gc_t *) b)->dir.first_offset) -
-        (((repo_dir_gc_t *) a)->dir.first_offset
-         < ((repo_dir_gc_t *) b)->dir.first_offset);
-}
-
-static int repo_gc_dir_src_cmp(const void *a, const void *b)
-{
-    return (((repo_dir_gc_t *) a)->offset
-            > ((repo_dir_gc_t *) b)->offset) -
-        (((repo_dir_gc_t *) a)->offset < ((repo_dir_gc_t *) b)->offset);
-}
-
-static repo_dir_gc_t *repo_gc_find_by_src(uint32_t offset)
-{
-    uint32_t i;
-    for (i = 0; i < gc_dir_pool.size; i++) {
-        if (gc_dir_pointer(i)->offset == offset) {
-            return gc_dir_pointer(i);
-        }
-    }
-    return NULL;
-}
-
-static void repo_gc_dirents(void)
-{
-    repo_dir_gc_t *gc_dir;
-    uint32_t i;
-    uint32_t offset = num_dirents_saved;
-    for (i = 0; i < gc_dir_pool.size; i++) {
-        gc_dir = gc_dir_pointer(i);
-        memmove(dirent_pointer(offset),
-                dirent_pointer(gc_dir->dir.first_offset),
-                gc_dir->dir.size * sizeof(repo_dirent_t));
-        gc_dir->dir.first_offset = offset;
-        offset += gc_dir->dir.size;
-    }
-    dirent_pool.size = offset;
-}
-
-static void repo_gc_dirs(void)
-{
-    uint32_t i;
-    repo_dir_gc_t *gc_dir;
-    repo_commit_t *commit = commit_pointer(active_commit);
-    repo_dir_t *root = repo_commit_root_dir(commit);
-    gc_dir_pool.size = 0;
-    repo_gc_mark_dirs(root);
-    qsort(gc_dir_pointer(0), gc_dir_pool.size, sizeof(repo_dir_gc_t),
-          repo_gc_dir_offset_cmp);
-    repo_gc_dirents();
-    gc_dir = repo_gc_find_by_src(commit->root_dir_offset);
-    commit->root_dir_offset =
-        gc_dir == NULL ? 0 : (gc_dir_offset(gc_dir) + num_dirs_saved);
-    for (i = num_dirents_saved; i < dirent_pool.size; i++) {
-        if (repo_dirent_is_dir(dirent_pointer(i)) &&
-            dirent_pointer(i)->content_offset >= num_dirs_saved) {
-            gc_dir =
-                repo_gc_find_by_src(dirent_pointer(i)->content_offset);
-            if (gc_dir) {
-                dirent_pointer(i)->content_offset =
-                    gc_dir_offset(gc_dir) + num_dirs_saved;
-            } else {
-                dirent_pointer(i)->content_offset = 0;
-            }
-        }
-    }
-    for (i = 0; i < gc_dir_pool.size; i++) {
-        *dir_pointer(num_dirs_saved + i) = gc_dir_pointer(i)->dir;
-    }
-    dir_pool.size = num_dirs_saved + gc_dir_pool.size;
-}
-
 void repo_commit(uint32_t revision)
 {
     fprintf(stderr, "R %d\n", revision);
@@ -371,8 +264,6 @@ void repo_commit(uint32_t revision)
         active_commit = commit_alloc(1);
         commit_pointer(active_commit)->root_dir_offset =
             dir_with_dirents_alloc(0);
-    } else {
-        repo_gc_dirs();
     }
     num_dirs_saved = dir_pool.size;
     num_dirents_saved = dirent_pool.size;
