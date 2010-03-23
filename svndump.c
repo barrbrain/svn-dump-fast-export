@@ -44,37 +44,77 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include "svndump.h"
 #include "repo_tree.h"
 
-int main(int argc, char **argv)
-{
-    svndump_read();
-    return 0;
-}
-
-/*
- * create dump representation by importing dump file
+/**
+ * node was moved to somwhere else
+ * (this is not contained in the dump)
+ * (only used in the FileChangeSet)
  */
-void svndump_read(void)
-{
-    char *t;
-    for (t = svndump_read_line(); t; t = svndump_read_line()) {
-        if (!strncmp(t, "Revision-number:", 16)) {
-            svnrev_read(atoi(&t[17]));
-        }
-    } 
-}
+#define NODEACT_REMOVE 5
+
+/**
+ * node was moved from somwhere else
+ * (this is not contained in the dump)
+ * (only used in the FileChangeSet)
+ */
+#define NODEACT_MOVE 4
+
+/**
+ * not clear if moved (if deleted afterwards) or
+ * added as copy (which can not be modeled straight in ccase).
+ * Will be used on create of SvnNodeEntry iff
+ * action is add and source is given.
+ * Will be modified after importing all files
+ * of a revision to NODEACT_ADD (copy which can
+ * not be modeled in ccase) or NODEACT_MOVE
+ */
+#define NODEACT_COPY_OR_MOVE 3
+
+/**
+ * node was deleted
+ */
+#define NODEACT_DELETE 2
+
+/**
+ * Node was added or copied from other location
+ */
+#define NODEACT_ADD 1
+
+/**
+ * node was modified
+ */
+#define NODEACT_CHANGE 0
+
+/**
+ * unknown action
+ */
+#define NODEACT_UNKNOWN -1
+
+/**
+ * Node is a directory
+ */
+#define NODEKIND_DIR 1
+
+/**
+ * Node is a file
+ */
+#define NODEKIND_FILE 0
+
+/**
+ * unknown type of node
+ */
+#define NODEKIND_UNKNOWN -1
+
+static char line_buffer[10000];
+static int line_buffer_len = 0;
+static int line_len = 0;
 
 /*
  * read string up to newline from input stream
  * return all characters except the newline
  */
-static char line_buffer[10000];
-static int line_buffer_len = 0;
-static int line_len = 0;
-
-char *svndump_read_line(void)
+static char *svndump_read_line(void)
 {
     char *res;
     char *end;
@@ -116,8 +156,7 @@ char *svndump_read_line(void)
 /*
  * so a line can be pushed-back after read
  */
-
-void svndump_pushBackInputLine()
+static void svndump_pushBackInputLine()
 {
     if (line_len) {
         if (line_buffer[line_len - 1] == '\0')
@@ -127,14 +166,7 @@ void svndump_pushBackInputLine()
     }
 }
 
-int strendswith(char *s, char *end)
-{
-    int end_len = strlen(end);
-    int s_len = strlen(s);
-    return s_len >= end_len && !strcmp(&s[s_len - end_len], end);
-}
-
-char *svndump_read_string(int len)
+static char *svndump_read_string(int len)
 {
     char *s = malloc(len + 1);
     int offset = 0;
@@ -153,7 +185,7 @@ char *svndump_read_string(int len)
 }
 
 char byte_buffer[4096];
-void copy_bytes(int len)
+static void copy_bytes(int len)
 {
     int in, out;
     if (line_buffer_len > line_len) {
@@ -179,7 +211,7 @@ void copy_bytes(int len)
     }
 }
 
-void skip_bytes(int len)
+static void skip_bytes(int len)
 {
     int in;
     if (line_buffer_len > line_len) {
@@ -196,7 +228,14 @@ void skip_bytes(int len)
     }
 }
 
-uint32_t next_blob_mark(void)
+static int strendswith(char *s, char *end)
+{
+    int end_len = strlen(end);
+    int s_len = strlen(s);
+    return s_len >= end_len && !strcmp(&s[s_len - end_len], end);
+}
+
+static uint32_t next_blob_mark(void)
 {
     static int32_t mark = 1000000000;
     return mark++;
@@ -205,7 +244,7 @@ uint32_t next_blob_mark(void)
 /**
  * read a modified file (node) within a revision
  */
-void svnnode_read(char *fname)
+static void svnnode_read(char *fname)
 {
     int type = NODEKIND_UNKNOWN;
     int action = NODEACT_UNKNOWN;
@@ -294,16 +333,10 @@ void svnnode_read(char *fname)
 }
 
 /**
- * Note: creating the revision will import it from
- * stdin
- */
-
-
-/**
  * create revision reading from stdin
  * param number revision number
  */
-void svnrev_read(uint32_t number)
+static void svnrev_read(uint32_t number)
 {
     struct tm tm;
     time_t timestamp;
@@ -367,4 +400,23 @@ void svnrev_read(uint32_t number)
     fputc('\n', stdout);
 
     printf("progress Imported commit %d.\n\n", number);
+}
+
+/*
+ * create dump representation by importing dump file
+ */
+static void svndump_read(void)
+{
+    char *t;
+    for (t = svndump_read_line(); t; t = svndump_read_line()) {
+        if (!strncmp(t, "Revision-number:", 16)) {
+            svnrev_read(atoi(&t[17]));
+        }
+    } 
+}
+
+int main(int argc, char **argv)
+{
+    svndump_read();
+    return 0;
 }
