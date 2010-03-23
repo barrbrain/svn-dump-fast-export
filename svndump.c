@@ -339,7 +339,7 @@ static void svnnode_read(char *fname)
 static void svnrev_read(uint32_t number)
 {
     struct tm tm;
-    time_t timestamp;
+    time_t timestamp = 0;
     char *descr = "";
     char *author = "nobody";
     char *date = "now";
@@ -370,6 +370,8 @@ static void svnrev_read(uint32_t number)
                 date = val;
                 fprintf(stderr, "Date: %s\n", date);
                 strptime(date, "%FT%T", &tm);
+                timezone = 0;
+                tm.tm_isdst = 0;
                 timestamp = mktime(&tm);
             }
             key = "";
@@ -394,7 +396,7 @@ static void svnrev_read(uint32_t number)
 
     printf("commit refs/heads/master\nmark :%d\n", number);
     printf("committer %s <%s@local> %ld +0000\n",
-         author, author, time(&timestamp));
+         author, author, timestamp);
     printf("data %ld\n%s\n", strlen(descr), descr);
     repo_diff(number - 1, number);
     fputc('\n', stdout);
