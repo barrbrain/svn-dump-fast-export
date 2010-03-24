@@ -52,7 +52,7 @@ typedef trp(node_t) tree_t;
 
 static tree_t tree = { NULL };
 
-obj_pool_gen(node, node_t, 32768);
+obj_pool_gen(node, node_t, 4096);
 obj_pool_gen(string, char, 4096);
 
 static char *node_value(node_t * node)
@@ -72,7 +72,7 @@ static int node_indentity_cmp(node_t * a, node_t * b)
         - (((uintptr_t) a) < ((uintptr_t) b));
 }
 
-trp_gen(static, tree_, tree_t, node_t, children, node_pool.base,
+trp_gen(static, tree_, tree_t, node_t, children, node,
         node_indentity_cmp);
 
 char *pool_fetch(uint32_t entry)
@@ -90,12 +90,12 @@ uint32_t pool_intern(char *key)
     match = tree_psearch(&tree, node);
     if (!match || node_value_cmp(node, match)) {
         tree_insert(&tree, node);
-        match = node;
     } else {
         node_free(1);
         string_free(key_len);
+        node = match;
     }
-    return node_offset(match);
+    return node_offset(node);
 }
 
 uint32_t pool_tok_r(char *str, const char *delim, char **saveptr)

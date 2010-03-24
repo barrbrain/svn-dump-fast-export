@@ -67,7 +67,7 @@ static uint32_t pre##_offset(obj_t * obj)                                  \
 }                                                                          \
 static obj_t *pre##_pointer(uint32_t offset)                               \
 {                                                                          \
-    return offset == ~0 ? NULL : &pre##_pool.base[offset];                 \
+    return offset >= pre##_pool.size ? NULL : &pre##_pool.base[offset];    \
 }                                                                          \
 
 #endif

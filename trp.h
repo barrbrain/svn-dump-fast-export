@@ -67,9 +67,9 @@ struct {								\
 
 /* Pointer/Offset conversion */
 #define trpn_pointer(a_base, a_offset)					\
-    ((a_offset)==(~0)?NULL:&(a_base)[a_offset])
+    (a_base##_pointer(a_offset))
 #define trpn_offset(a_type, a_base, a_pointer)				\
-    ((a_pointer)==NULL?(~0):(a_type*)(a_pointer)-(a_base))
+    (a_base##_offset(a_pointer))
 
 /* Left accessors. */
 #define	trp_left_get(a_base, a_type, a_field, a_node)			\
