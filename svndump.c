@@ -248,8 +248,8 @@ static void svnnode_read(char *fname)
 {
     int type = NODEKIND_UNKNOWN;
     int action = NODEACT_UNKNOWN;
-    int propLength = 0;
-    int textLength = 0;
+    int propLength = -1;
+    int textLength = -1;
     char *src = NULL;
     int srcRev = 0;
     char *dst = strdup(fname);
@@ -306,21 +306,21 @@ static void svnnode_read(char *fname)
         }
     }
 
-    if (propLength) {
+    if (propLength > 0) {
         skip_bytes(propLength);
     }
 
     if (action == NODEACT_DELETE) {
         repo_delete(dst);
     } else if (action == NODEACT_CHANGE) {
-        if (src && srcRev) {
+        if (src && srcRev && textLength == -1) {
             repo_copy(srcRev, src, dst);
         } else {
             mark = next_blob_mark();
             repo_modify(dst, mark);
         }
     } else if (action == NODEACT_ADD) {
-        if (src && srcRev) {
+        if (src && srcRev && textLength == -1) {
             repo_copy(srcRev, src, dst);
         } else if (type == NODEKIND_DIR) {
             repo_add(dst, REPO_MODE_DIR, 0);
@@ -329,6 +329,8 @@ static void svnnode_read(char *fname)
             repo_add(dst, REPO_MODE_BLB, mark);
         }
     }
+
+    if(textLength == -1) textLength = 0;
 
     if (mark) {
         printf("blob\nmark :%d\ndata %d\n", mark, textLength);
