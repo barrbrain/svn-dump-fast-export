@@ -315,7 +315,7 @@ static void svnnode_read(char *fname)
     } else if (action == NODEACT_CHANGE) {
         if (src && srcRev && textLength == -1) {
             repo_copy(srcRev, src, dst);
-        } else {
+        } else if (textLength >= 0) {
             mark = next_blob_mark();
             repo_modify(dst, mark);
         }
