@@ -283,6 +283,9 @@ static void svnnode_read(char *fname)
             else if (!strncasecmp(val, "change", 6))
                 action = NODEACT_CHANGE;
 
+            else if (!strncasecmp(val, "replace", 6))
+                action = NODEACT_CHANGE;
+
             else
                 action = NODEACT_UNKNOWN;
         } else if (!strncmp(t, "Node-copyfrom-path", 18)) {
