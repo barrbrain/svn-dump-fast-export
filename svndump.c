@@ -331,6 +331,11 @@ static void svnnode_read(char *fname)
     }
 }
 
+static char *uuid = NULL;
+static char *url = NULL;
+
+static char gitsvnline[4096];
+
 /**
  * create revision reading from stdin
  * param number revision number
@@ -394,9 +399,16 @@ static void svnrev_read(uint32_t number)
         return;
 
     printf("commit refs/heads/master\nmark :%d\n", number);
-    printf("committer %s <%s@local> %ld +0000\n",
-         author, author, timestamp);
-    printf("data %ld\n%s\n", strlen(descr), descr);
+    printf("committer %s <%s@%s> %ld +0000\n",
+         author, author, uuid ? uuid : "local", timestamp);
+    if (uuid && url) {
+        snprintf(gitsvnline, 4096, "\n\ngit-svn-id: %s@%d %s\n",
+             url, number, uuid);
+    } else {
+        *gitsvnline = '\0';
+    }
+    printf("data %ld\n%s%s\n",
+           strlen(descr) + strlen(gitsvnline), descr, gitsvnline);
     repo_diff(number - 1, number);
     fputc('\n', stdout);
 
@@ -414,12 +426,15 @@ static void svndump_read(void)
         if (!strncmp(t, "Revision-number:", 16)) {
             revision = atoi(&t[17]);
             svnrev_read(revision);
+        } else if(!strncmp(t, "UUID:", 5)) {
+            uuid = strdup(&t[6]);
         }
     } 
 }
 
 int main(int argc, char **argv)
 {
+    if (argc > 1) url = argv[1];
     svndump_read();
     return 0;
 }
