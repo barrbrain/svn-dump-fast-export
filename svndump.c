@@ -46,6 +46,7 @@
 #include <time.h>
 #include "repo_tree.h"
 
+#define NODEACT_REPLACE 6
 /**
  * node was moved to somwhere else
  * (this is not contained in the dump)
@@ -90,21 +91,6 @@
  * unknown action
  */
 #define NODEACT_UNKNOWN -1
-
-/**
- * Node is a directory
- */
-#define NODEKIND_DIR 1
-
-/**
- * Node is a file
- */
-#define NODEKIND_FILE 0
-
-/**
- * unknown type of node
- */
-#define NODEKIND_UNKNOWN -1
 
 static char line_buffer[10000];
 static int line_buffer_len = 0;
@@ -246,7 +232,7 @@ static uint32_t next_blob_mark(void)
  */
 static void svnnode_read(char *fname)
 {
-    int type = NODEKIND_UNKNOWN;
+    int type = 0;
     int action = NODEACT_UNKNOWN;
     int propLength = -1;
     int textLength = -1;
@@ -254,6 +240,8 @@ static void svnnode_read(char *fname)
     int srcRev = 0;
     char *dst = strdup(fname);
     char *t;
+    int len;
+    char *key;
     char *val;
     uint32_t mark = 0;
 
@@ -264,14 +252,13 @@ static void svnnode_read(char *fname)
          t = svndump_read_line()) {
         if (!strncmp(t, "Node-kind:", 10)) {
             val = &t[11];
-            if (!strncasecmp(val, "dir", 3))
-                type = NODEKIND_DIR;
-
-            else if (!strncasecmp(val, "file", 4))
-                type = NODEKIND_FILE;
-
-            else
-                type = NODEKIND_UNKNOWN;
+            if (!strncasecmp(val, "dir", 3)) {
+                type = REPO_MODE_DIR;
+            } else if (!strncasecmp(val, "file", 4)) {
+                type = REPO_MODE_BLB;
+            } else {
+                fprintf(stderr, "Unknown node-kind: %s\n", val);
+            }
         } else if (!strncmp(t, "Node-action", 11)) {
             val = &t[13];
             if (!strncasecmp(val, "delete", 6))
@@ -284,7 +271,7 @@ static void svnnode_read(char *fname)
                 action = NODEACT_CHANGE;
 
             else if (!strncasecmp(val, "replace", 6))
-                action = NODEACT_CHANGE;
+                action = NODEACT_REPLACE;
 
             else
                 action = NODEACT_UNKNOWN;
@@ -307,26 +294,48 @@ static void svnnode_read(char *fname)
     }
 
     if (propLength > 0) {
-        skip_bytes(propLength);
+        for (t = svndump_read_line();
+             t && strncasecmp(t, "PROPS-END", 9);
+             t = svndump_read_line()) {
+            if (!strncmp(t, "K ", 2)) {
+                len = atoi(&t[2]);
+                key = svndump_read_string(len);
+                svndump_read_line();
+            } else if (!strncmp(t, "V ", 2)) {
+                len = atoi(&t[2]);
+                val = svndump_read_string(len);
+                if (strendswith(key, ":executable")) {
+                    if (type == REPO_MODE_BLB) {
+                        type = REPO_MODE_EXE;
+                    }
+                    fprintf(stderr, "Executable: %s\n", val);
+                }
+                key = "";
+                svndump_read_line();
+            }
+        }
     }
 
     if (action == NODEACT_DELETE) {
         repo_delete(dst);
-    } else if (action == NODEACT_CHANGE) {
+    } else if (action == NODEACT_CHANGE || 
+               action == NODEACT_REPLACE) {
         if (src && srcRev && textLength == -1) {
             repo_copy(srcRev, src, dst);
         } else if (textLength >= 0) {
             mark = next_blob_mark();
-            repo_modify(dst, mark);
+            if (propLength >= 0) {
+                repo_modify(dst, type, mark);
+            } else {
+                repo_replace(dst, mark);
+            }
         }
     } else if (action == NODEACT_ADD) {
         if (src && srcRev && textLength == -1) {
             repo_copy(srcRev, src, dst);
-        } else if (type == NODEKIND_DIR) {
-            repo_add(dst, REPO_MODE_DIR, 0);
         } else {
-            mark = next_blob_mark();
-            repo_add(dst, REPO_MODE_BLB, mark);
+            mark = type == REPO_MODE_DIR ? 0 : next_blob_mark();
+            repo_add(dst, type, mark);
         }
     }
 
@@ -419,9 +428,12 @@ static void svnrev_read(uint32_t number)
 static void svndump_read(void)
 {
     char *t;
+    int revision;
     for (t = svndump_read_line(); t; t = svndump_read_line()) {
         if (!strncmp(t, "Revision-number:", 16)) {
-            svnrev_read(atoi(&t[17]));
+            revision = atoi(&t[17]);
+            if (revision > 1000) break;
+            svnrev_read(revision);
         }
     } 
 }

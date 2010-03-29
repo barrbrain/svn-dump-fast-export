@@ -245,10 +245,20 @@ void repo_add(char *path, uint32_t mode, uint32_t blob_mark)
     repo_write_dirent(path, mode, blob_mark, 0);
 }
 
-void repo_modify(char *path, uint32_t blob_mark)
+void repo_replace(char *path, uint32_t blob_mark)
+{
+    repo_dirent_t *src_dirent;
+    src_dirent = repo_read_dirent(active_commit, strdup(path));
+    if (src_dirent == NULL)
+        return;
+    fprintf(stderr, "R %s %06o %d\n", path, src_dirent->mode, blob_mark);
+    repo_write_dirent(path, src_dirent->mode, blob_mark, 0);
+}
+
+void repo_modify(char *path, uint32_t mode, uint32_t blob_mark)
 {
     fprintf(stderr, "M %s %d\n", path, blob_mark);
-    repo_write_dirent(path, REPO_MODE_BLB, blob_mark, 0);
+    repo_write_dirent(path, mode, blob_mark, 0);
 }
 
 void repo_delete(char *path)

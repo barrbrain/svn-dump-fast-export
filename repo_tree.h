@@ -41,7 +41,9 @@ void repo_copy(uint32_t revision, char *src, char *dst);
 
 void repo_add(char *path, uint32_t mode, uint32_t blob_mark);
 
-void repo_modify(char *path, uint32_t blob_mark);
+void repo_replace(char *path, uint32_t blob_mark);
+
+void repo_modify(char *path, uint32_t mode, uint32_t blob_mark);
 
 void repo_delete(char *path);
 
