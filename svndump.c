@@ -46,31 +46,10 @@
 #include <time.h>
 #include "repo_tree.h"
 
-#define NODEACT_REPLACE 6
 /**
- * node was moved to somwhere else
- * (this is not contained in the dump)
- * (only used in the FileChangeSet)
+ * node was replaced
  */
-#define NODEACT_REMOVE 5
-
-/**
- * node was moved from somwhere else
- * (this is not contained in the dump)
- * (only used in the FileChangeSet)
- */
-#define NODEACT_MOVE 4
-
-/**
- * not clear if moved (if deleted afterwards) or
- * added as copy (which can not be modeled straight in ccase).
- * Will be used on create of SvnNodeEntry iff
- * action is add and source is given.
- * Will be modified after importing all files
- * of a revision to NODEACT_ADD (copy which can
- * not be modeled in ccase) or NODEACT_MOVE
- */
-#define NODEACT_COPY_OR_MOVE 3
+#define NODEACT_REPLACE 3
 
 /**
  * node was deleted
@@ -78,7 +57,7 @@
 #define NODEACT_DELETE 2
 
 /**
- * Node was added or copied from other location
+ * node was added or copied from other location
  */
 #define NODEACT_ADD 1
 
@@ -316,25 +295,27 @@ static void svnnode_read(char *fname)
         }
     }
 
+    if (src && srcRev) {
+        repo_copy(srcRev, src, strdup(dst));
+    }
+
+    if (textLength >= 0 && type != REPO_MODE_DIR) {
+        mark = next_blob_mark();
+    }
+
     if (action == NODEACT_DELETE) {
         repo_delete(dst);
     } else if (action == NODEACT_CHANGE || 
                action == NODEACT_REPLACE) {
-        if (src && srcRev && textLength == -1) {
-            repo_copy(srcRev, src, dst);
+        if (propLength >= 0 && textLength >= 0) {
+            repo_modify(dst, type, mark);
         } else if (textLength >= 0) {
-            mark = next_blob_mark();
-            if (propLength >= 0) {
-                repo_modify(dst, type, mark);
-            } else {
-                repo_replace(dst, mark);
-            }
+            repo_replace(dst, mark);
         }
     } else if (action == NODEACT_ADD) {
-        if (src && srcRev && textLength == -1) {
-            repo_copy(srcRev, src, dst);
-        } else {
-            mark = type == REPO_MODE_DIR ? 0 : next_blob_mark();
+        if (src && srcRev && propLength < 0 && textLength >= 0) {
+            repo_replace(dst, mark);
+        } else if(type == REPO_MODE_DIR || textLength >= 0){
             repo_add(dst, type, mark);
         }
     }
@@ -432,7 +413,6 @@ static void svndump_read(void)
     for (t = svndump_read_line(); t; t = svndump_read_line()) {
         if (!strncmp(t, "Revision-number:", 16)) {
             revision = atoi(&t[17]);
-            if (revision > 1000) break;
             svnrev_read(revision);
         }
     } 
