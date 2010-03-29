@@ -50,7 +50,7 @@ struct node_s {
 
 typedef trp(node_t) tree_t;
 
-static tree_t tree = { NULL };
+static tree_t tree = { ~0 };
 
 obj_pool_gen(node, node_t, 4096);
 obj_pool_gen(string, char, 4096);
