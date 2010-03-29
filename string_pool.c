@@ -103,3 +103,14 @@ uint32_t pool_tok_r(char *str, const char *delim, char **saveptr)
     char *token = strtok_r(str, delim, saveptr);
     return token ? pool_intern(token) : ~0;
 }
+
+void pool_print_seq(uint32_t len, uint32_t * seq, char delim, FILE * stream)
+{
+    uint32_t i;
+    for (i = 0; i < len; i++) {
+        fputs(pool_fetch(seq[i]), stream);
+        if (i < len - 1)
+            fputc(delim, stream);
+    }
+}
+

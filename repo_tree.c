@@ -310,12 +310,7 @@ void repo_commit(uint32_t revision, char * author, char * log, char * uuid,
 
 static void repo_print_path(uint32_t depth, uint32_t * path)
 {
-    uint32_t p;
-    for (p = 0; p < depth; p++) {
-        fputs(pool_fetch(path[p]), stdout);
-        if (p < depth - 1)
-            putchar('/');
-    }
+    pool_print_seq(depth, path, '/', stdout);
 }
 
 static void repo_git_delete(uint32_t depth, uint32_t * path)
