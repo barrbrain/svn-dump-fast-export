@@ -401,9 +401,9 @@ repo_diff_r(uint32_t depth, uint32_t * path, repo_dir_t * dir1,
     }
 }
 
-void repo_diff(uint32_t r1, uint32_t r2)
+static uint32_t path_stack[1000];
+static void repo_diff(uint32_t r1, uint32_t r2)
 {
-    uint32_t path_stack[1000];
     repo_diff_r(0,
                 path_stack,
                 repo_commit_root_dir(commit_pointer(r1)),
