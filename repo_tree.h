@@ -47,7 +47,8 @@ void repo_modify(char *path, uint32_t mode, uint32_t blob_mark);
 
 void repo_delete(char *path);
 
-void repo_commit(uint32_t revision);
+void repo_commit(uint32_t revision, char * author, char * log, char * uuid,
+                 char * url, time_t timestamp);
 
 void repo_diff(uint32_t r1, uint32_t r2);
 

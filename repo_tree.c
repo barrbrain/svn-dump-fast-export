@@ -33,6 +33,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <time.h>
 
 #include "string_pool.h"
 #include "repo_tree.h"
@@ -267,13 +268,38 @@ void repo_delete(char *path)
     repo_write_dirent(path, 0, 0, 1);
 }
 
-void repo_commit(uint32_t revision)
+static char gitsvnline[4096];
+
+static void repo_git_commit(uint32_t revision, char * author, char * log,
+                            char * uuid, char * url, time_t timestamp)
+{
+    printf("commit refs/heads/master\nmark :%d\n", revision);
+    printf("committer %s <%s@%s> %ld +0000\n",
+         author, author, uuid ? uuid : "local", timestamp);
+    if (uuid && url) {
+        snprintf(gitsvnline, 4096, "\n\ngit-svn-id: %s@%d %s\n",
+             url, revision, uuid);
+    } else {
+        *gitsvnline = '\0';
+    }
+    printf("data %ld\n%s%s\n",
+           strlen(log) + strlen(gitsvnline), log, gitsvnline);
+    repo_diff(revision - 1, revision);
+    fputc('\n', stdout);
+
+    printf("progress Imported commit %d.\n\n", revision);
+}
+
+void repo_commit(uint32_t revision, char * author, char * log, char * uuid,
+                 char * url, time_t timestamp)
 {
     fprintf(stderr, "R %d\n", revision);
     if (revision == 0) {
         active_commit = commit_alloc(1);
         commit_pointer(active_commit)->root_dir_offset =
             dir_with_dirents_alloc(0);
+    } else {
+        repo_git_commit(revision, author, log, uuid, url, timestamp);
     }
     num_dirs_saved = dir_pool.size;
     num_dirents_saved = dirent_pool.size;

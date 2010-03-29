@@ -334,7 +334,6 @@ static void svnnode_read(char *fname)
 static char *uuid = NULL;
 static char *url = NULL;
 
-static char gitsvnline[4096];
 
 /**
  * create revision reading from stdin
@@ -393,26 +392,7 @@ static void svnrev_read(uint32_t number)
     if (t)
         svndump_pushBackInputLine();
 
-    repo_commit(number);
-
-    if (!number)
-        return;
-
-    printf("commit refs/heads/master\nmark :%d\n", number);
-    printf("committer %s <%s@%s> %ld +0000\n",
-         author, author, uuid ? uuid : "local", timestamp);
-    if (uuid && url) {
-        snprintf(gitsvnline, 4096, "\n\ngit-svn-id: %s@%d %s\n",
-             url, number, uuid);
-    } else {
-        *gitsvnline = '\0';
-    }
-    printf("data %ld\n%s%s\n",
-           strlen(descr) + strlen(gitsvnline), descr, gitsvnline);
-    repo_diff(number - 1, number);
-    fputc('\n', stdout);
-
-    printf("progress Imported commit %d.\n\n", number);
+    repo_commit(number, author, descr, uuid, url, timestamp);
 }
 
 /*
