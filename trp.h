@@ -68,21 +68,21 @@ struct {								\
 /* Pointer/Offset conversion */
 #define trpn_pointer(a_base, a_offset)					\
     (a_base##_pointer(a_offset))
-#define trpn_offset(a_base, a_pointer)				\
+#define trpn_offset(a_base, a_pointer)				        \
     (a_base##_offset(a_pointer))
 
 /* Left accessors. */
 #define	trp_left_get(a_base, a_type, a_field, a_node)			\
     trpn_pointer(a_base, (a_node)->a_field.trpn_left)
 #define	trp_left_set(a_base, a_type, a_field, a_node, a_left) do {	\
-    (a_node)->a_field.trpn_left = trpn_offset(a_base, a_left);	\
+    (a_node)->a_field.trpn_left = trpn_offset(a_base, a_left);	        \
 } while (0)
 
 /* Right accessors. */
 #define	trp_right_get(a_base, a_type, a_field, a_node)			\
     trpn_pointer(a_base, (a_node)->a_field.trpn_right)
 #define	trp_right_set(a_base, a_type, a_field, a_node, a_right) do {	\
-    (a_node)->a_field.trpn_right = trpn_offset(a_base, a_right);\
+    (a_node)->a_field.trpn_right = trpn_offset(a_base, a_right);        \
 } while (0)
 
 /* Priority accessors. */
@@ -96,8 +96,8 @@ struct {								\
 } while (0)
 
 /* Tree initializer. */
-#define	trp_new(a_type, a_base, a_trp) do {			\
-    (a_trp)->trp_root = trpn_offset(a_base, NULL);						\
+#define	trp_new(a_type, a_base, a_trp) do {		        	\
+    (a_trp)->trp_root = trpn_offset(a_base, NULL);			\
 } while (0)
 
 /* Internal utility macros. */
@@ -153,12 +153,10 @@ struct {								\
  * The following API is generated:
  *
  *   static void
- *   ex_new(ex_t *treap, uint32_t seed);
+ *   ex_new(ex_t *treap);
  *       Description: Initialize a treap structure.
  *       Args:
  *         treap: Pointer to an uninitialized treap object.
- *         seed : Pseudo-random number generator seed.  The seed value isn't
- *                very important, so if in doubt, pick a favorite number.
  *
  *   static ex_node_t *
  *   ex_psearch(ex_t *treap, ex_node_t *key);
@@ -180,14 +178,14 @@ struct {								\
  */
 #define	trp_gen(a_attr, a_pre, a_t_type, a_type, a_field, a_base, a_cmp)\
 a_attr void								\
-a_pre##new(a_t_type *treap, uint32_t seed) {				\
-    trp_new(a_type, a_base, treap);				\
+a_pre##new(a_t_type *treap) {           				\
+    trp_new(a_type, a_base, treap);			        	\
 }									\
 a_attr a_type *								\
 a_pre##search(a_t_type *treap, a_type *key) {				\
     a_type *ret;							\
     int cmp;								\
-    ret = trpn_pointer(a_base, treap->trp_root);						\
+    ret = trpn_pointer(a_base, treap->trp_root);			\
     while (ret != NULL							\
       && (cmp = (a_cmp)(key, ret)) != 0) {				\
 	if (cmp < 0) {							\
@@ -201,7 +199,7 @@ a_pre##search(a_t_type *treap, a_type *key) {				\
 a_attr a_type *								\
 a_pre##psearch(a_t_type *treap, a_type *key) {				\
     a_type *ret;							\
-    a_type *tnode = trpn_pointer(a_base, treap->trp_root);					\
+    a_type *tnode = trpn_pointer(a_base, treap->trp_root);		\
     ret = NULL;								\
     while (tnode != NULL) {						\
 	int cmp = (a_cmp)(key, tnode);					\
@@ -254,6 +252,7 @@ a_pre##insert_recurse(a_type *cur_node, a_type *ins_node) {		\
 a_attr void								\
 a_pre##insert(a_t_type *treap, a_type *node) {				\
     trp_node_new(a_base, a_type, a_field, treap, node);			\
-    treap->trp_root = trpn_offset(a_base, a_pre##insert_recurse(trpn_pointer(a_base, treap->trp_root), node));	\
+    treap->trp_root = trpn_offset(a_base, a_pre##insert_recurse(        \
+        trpn_pointer(a_base, treap->trp_root), node));	                \
 }
 #endif                          /* TRP_H_ */
