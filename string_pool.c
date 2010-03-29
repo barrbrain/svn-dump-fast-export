@@ -75,7 +75,7 @@ static int node_indentity_cmp(node_t * a, node_t * b)
 trp_gen(static, tree_, tree_t, node_t, children, node,
         node_indentity_cmp);
 
-char *pool_fetch(uint32_t entry)
+static char *pool_fetch(uint32_t entry)
 {
     return node_value(node_pointer(entry));
 }
