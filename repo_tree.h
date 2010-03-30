@@ -37,11 +37,11 @@
 #define REPO_MODE_EXE 0100755
 #define REPO_MODE_LNK 0120000
 
-void repo_copy(uint32_t revision, char *src, char *dst);
+uint32_t repo_copy(uint32_t revision, char *src, char *dst);
 
 void repo_add(char *path, uint32_t mode, uint32_t blob_mark);
 
-void repo_replace(char *path, uint32_t blob_mark);
+uint32_t repo_replace(char *path, uint32_t blob_mark);
 
 void repo_modify(char *path, uint32_t mode, uint32_t blob_mark);
 

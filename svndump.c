@@ -217,6 +217,7 @@ static void svnnode_read(char *fname)
     int textLength = -1;
     char *src = NULL;
     int srcRev = 0;
+    uint32_t srcMode;
     char *dst = strdup(fname);
     char *t;
     int len;
@@ -301,7 +302,7 @@ static void svnnode_read(char *fname)
     }
 
     if (src && srcRev) {
-        repo_copy(srcRev, src, strdup(dst));
+        srcMode = repo_copy(srcRev, src, strdup(dst));
     }
 
     if (textLength >= 0 && type != REPO_MODE_DIR) {
@@ -315,14 +316,18 @@ static void svnnode_read(char *fname)
         if (propLength >= 0 && textLength >= 0) {
             repo_modify(dst, type, mark);
         } else if (textLength >= 0) {
-            repo_replace(dst, mark);
+            srcMode = repo_replace(dst, mark);
         }
     } else if (action == NODEACT_ADD) {
         if (src && srcRev && propLength < 0 && textLength >= 0) {
-            repo_replace(dst, mark);
+            srcMode = repo_replace(dst, mark);
         } else if(type == REPO_MODE_DIR || textLength >= 0){
             repo_add(dst, type, mark);
         }
+    }
+
+    if (propLength < 0 && srcMode) {
+        type = srcMode;
     }
 
     if(textLength == -1) textLength = 0;

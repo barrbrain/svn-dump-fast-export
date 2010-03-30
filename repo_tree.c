@@ -229,15 +229,18 @@ repo_write_dirent(char *path, uint32_t mode, uint32_t content_offset,
     }
 }
 
-void repo_copy(uint32_t revision, char *src, char *dst)
+uint32_t repo_copy(uint32_t revision, char *src, char *dst)
 {
+    uint32_t mode = 0, content_offset = 0;
     repo_dirent_t *src_dirent;
     fprintf(stderr, "C %d:%s %s\n", revision, src, dst);
     src_dirent = repo_read_dirent(revision, src);
-    if (src_dirent == NULL)
-        return;
-    repo_write_dirent(dst, src_dirent->mode, src_dirent->content_offset,
-                      0);
+    if (src_dirent != NULL) {
+        mode = src_dirent->mode;
+        content_offset = src_dirent->content_offset;
+        repo_write_dirent(dst, mode, content_offset, 0);
+    }
+    return mode;
 }
 
 void repo_add(char *path, uint32_t mode, uint32_t blob_mark)
@@ -246,14 +249,17 @@ void repo_add(char *path, uint32_t mode, uint32_t blob_mark)
     repo_write_dirent(path, mode, blob_mark, 0);
 }
 
-void repo_replace(char *path, uint32_t blob_mark)
+uint32_t repo_replace(char *path, uint32_t blob_mark)
 {
+    uint32_t mode = 0;
     repo_dirent_t *src_dirent;
     src_dirent = repo_read_dirent(active_commit, strdup(path));
-    if (src_dirent == NULL)
-        return;
-    fprintf(stderr, "R %s %06o %d\n", path, src_dirent->mode, blob_mark);
-    repo_write_dirent(path, src_dirent->mode, blob_mark, 0);
+    if (src_dirent != NULL) {
+        mode = src_dirent->mode;
+        fprintf(stderr, "R %s %06o %d\n", path, mode, blob_mark);
+        repo_write_dirent(path, mode, blob_mark, 0);
+    }
+    return mode;
 }
 
 void repo_modify(char *path, uint32_t mode, uint32_t blob_mark)
