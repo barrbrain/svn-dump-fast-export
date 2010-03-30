@@ -328,6 +328,11 @@ static void svnnode_read(char *fname)
     if(textLength == -1) textLength = 0;
 
     if (mark) {
+        if (type == REPO_MODE_LNK) {
+            /* svn symlink blobs start with "link " */
+            skip_bytes(5);
+            textLength -= 5;
+        }
         printf("blob\nmark :%d\ndata %d\n", mark, textLength);
         copy_bytes(textLength);
         fputc('\n', stdout);
