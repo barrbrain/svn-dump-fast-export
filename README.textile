@@ -1,9 +1,10 @@
 h1. A tool to convert a subversion dump for input to git-fast-import
 
-This project is currently in its infancy - just the building blocks for the data-structures needed for good time and memory bounds. The inspiration comes from both git2svn.py and svn-all-fast-export. It will eventually combine some functions of both projects but hopefully with a small codebase with few dependencies.
+This project is now largely functionally complete. There is still quite a bit of testing and code cleanup to be done before the first major release.
 
 h1. License
 
 This project is distributed under a two-clause BSD style license.
 It contains a derivative of Jason Evans' hash-based treap implementation.
+It also contains a derivative of svndump-0.92, a parser in Java by Stefan Hegny and others. This was a component of "SvnToCCase":http://svn2cc.sarovar.org. 
 The rest of the project is presently copyright David Barr.
