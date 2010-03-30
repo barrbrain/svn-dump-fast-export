@@ -302,7 +302,7 @@ static void svnnode_read(char *fname)
     }
 
     if (src && srcRev) {
-        srcMode = repo_copy(srcRev, src, strdup(dst));
+        srcMode = repo_copy(srcRev, src, dst);
     }
 
     if (textLength >= 0 && type != REPO_MODE_DIR) {

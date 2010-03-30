@@ -91,7 +91,7 @@ static repo_dirent_t *repo_dirent_by_name(repo_dir_t * dir,
                                           uint32_t name_offset)
 {
     repo_dirent_t key;
-    if (dir->size == 0)
+    if (dir == NULL || dir->size == 0)
         return NULL;
     key.name_offset = name_offset;
     return bsearch(&key, repo_first_dirent(dir), dir->size,
@@ -100,7 +100,7 @@ static repo_dirent_t *repo_dirent_by_name(repo_dir_t * dir,
 
 static int repo_dirent_is_dir(repo_dirent_t * dirent)
 {
-    return dirent->mode == REPO_MODE_DIR;
+    return dirent != NULL && dirent->mode == REPO_MODE_DIR;
 }
 
 static int repo_dirent_is_blob(repo_dirent_t * dirent)
@@ -154,6 +154,7 @@ static repo_dir_t *repo_clone_dir(repo_dir_t * orig_dir, uint32_t padding)
     return dir_pointer(new_o);
 }
 
+static char repo_path_buffer[REPO_MAX_PATH_LEN];
 static repo_dirent_t *repo_read_dirent(uint32_t revision, char *path)
 {
     char *ctx = NULL;
@@ -161,6 +162,9 @@ static repo_dirent_t *repo_read_dirent(uint32_t revision, char *path)
     repo_dir_t *dir = NULL;
     repo_dirent_t *dirent = NULL;
     dir = repo_commit_root_dir(commit_pointer(revision));
+    strncpy(repo_path_buffer, path, REPO_MAX_PATH_LEN);
+    repo_path_buffer[REPO_MAX_PATH_LEN - 1] = '\0';
+    path = repo_path_buffer;
     for (name = pool_tok_r(path, "/", &ctx);
          ~name; name = pool_tok_r(NULL, "/", &ctx)) {
         dirent = repo_dirent_by_name(dir, name);
@@ -187,6 +191,9 @@ repo_write_dirent(char *path, uint32_t mode, uint32_t content_offset,
     dir = repo_commit_root_dir(commit_pointer(revision));
     dir = repo_clone_dir(dir, 0);
     commit_pointer(revision)->root_dir_offset = dir_offset(dir);
+    strncpy(repo_path_buffer, path, REPO_MAX_PATH_LEN);
+    repo_path_buffer[REPO_MAX_PATH_LEN - 1] = '\0';
+    path = repo_path_buffer;
     for (name = pool_tok_r(path, "/", &ctx); ~name;
          name = pool_tok_r(NULL, "/", &ctx)) {
         parent_dir_o = dir_offset(dir);
@@ -253,7 +260,7 @@ uint32_t repo_replace(char *path, uint32_t blob_mark)
 {
     uint32_t mode = 0;
     repo_dirent_t *src_dirent;
-    src_dirent = repo_read_dirent(active_commit, strdup(path));
+    src_dirent = repo_read_dirent(active_commit, path);
     if (src_dirent != NULL) {
         mode = src_dirent->mode;
         fprintf(stderr, "R %s %06o %d\n", path, mode, blob_mark);
