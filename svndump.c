@@ -288,6 +288,11 @@ static void svnnode_read(char *fname)
                         type = REPO_MODE_EXE;
                     }
                     fprintf(stderr, "Executable: %s\n", val);
+                } else if (strendswith(key, ":special")) {
+                    if (type == REPO_MODE_BLB) {
+                        type = REPO_MODE_LNK;
+                    }
+                    fprintf(stderr, "Special: %s\n", val);
                 }
                 key = "";
                 svndump_read_line();
