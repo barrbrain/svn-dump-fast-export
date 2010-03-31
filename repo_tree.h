@@ -52,4 +52,6 @@ void repo_delete(char *path);
 void repo_commit(uint32_t revision, char * author, char * log, char * uuid,
                  char * url, time_t timestamp);
 
+void repo_copy_blob(uint32_t mode, uint32_t mark, uint32_t len);
+
 #endif

@@ -422,3 +422,15 @@ void repo_commit(uint32_t revision, char * author, char * log, char * uuid,
     commit_pointer(active_commit)->root_dir_offset =
         commit_pointer(active_commit - 1)->root_dir_offset;
 }
+
+void repo_copy_blob(uint32_t mode, uint32_t mark, uint32_t len)
+{
+    if (mode == REPO_MODE_LNK) {
+        /* svn symlink blobs start with "link " */
+        buffer_skip_bytes(5);
+        len -= 5;
+    }
+    printf("blob\nmark :%d\ndata %d\n", mark, len);
+    buffer_copy_bytes(len);
+    fputc('\n', stdout);
+}
