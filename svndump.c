@@ -161,6 +161,10 @@ static void read_props(void)
 
 static void handle_node(void)
 {
+    if (node_ctx.propLength > 0) {
+        read_props();
+    }
+
     if (node_ctx.src && node_ctx.srcRev) {
         node_ctx.srcMode = repo_copy(node_ctx.srcRev, node_ctx.src, node_ctx.dst);
     }
@@ -189,6 +193,12 @@ static void handle_node(void)
     if (node_ctx.propLength < 0 && node_ctx.srcMode) {
         node_ctx.type = node_ctx.srcMode;
     }
+
+    if (node_ctx.mark) {
+        repo_copy_blob(node_ctx.type, node_ctx.mark, node_ctx.textLength);
+    } else if (node_ctx.textLength > 0) {
+        buffer_skip_bytes(node_ctx.textLength);
+    }
 }
 
 static void handle_revision(void)
@@ -206,75 +216,69 @@ static void svndump_read(char * url)
     char *val;
     char *t;
     int active_ctx = DUMP_CTX; 
+    int len;
 
     reset_dump_ctx(url);
     for (t = buffer_read_line(); t; t = buffer_read_line()) {
-        if(!strncmp(t, "UUID:", 5)) {
-            dump_ctx.uuid = strdup(&t[6]);
-        } else if (!strncmp(t, "Revision-number:", 16)) {
+        val = strstr(t, ": ");
+        if (!val) continue;
+        *val++ = '\0';
+        *val++ = '\0';
+
+        if(!strcmp(t, "UUID")) {
+            dump_ctx.uuid = strdup(val);
+        } else if (!strcmp(t, "Revision-number")) {
             if (active_ctx != DUMP_CTX) handle_revision();
             active_ctx = REV_CTX;
-            reset_rev_ctx(atoi(&t[17]));
+            reset_rev_ctx(atoi(val));
             fprintf(stderr, "Revision: %d\n", rev_ctx.revision);
-        } else if (!strncmp(t, "Node-path:", 10)) {
+        } else if (!strcmp(t, "Node-path")) {
             active_ctx = NODE_CTX;
-            reset_node_ctx(&t[11]);
+            reset_node_ctx(val);
             fprintf(stderr, "Node path: %s\n", node_ctx.dst);
-        } else if (!strncmp(t, "Node-kind:", 10)) {
-            val = &t[11];
-            if (!strncasecmp(val, "dir", 3)) {
+        } else if (!strcmp(t, "Node-kind")) {
+            if (!strcmp(val, "dir")) {
                 node_ctx.type = REPO_MODE_DIR;
-            } else if (!strncasecmp(val, "file", 4)) {
+            } else if (!strcmp(val, "file")) {
                 node_ctx.type = REPO_MODE_BLB;
             } else {
                 fprintf(stderr, "Unknown node-kind: %s\n", val);
             }
-        } else if (!strncmp(t, "Node-action", 11)) {
-            val = &t[13];
-            if (!strncasecmp(val, "delete", 6)) {
+        } else if (!strcmp(t, "Node-action")) {
+            if (!strcmp(val, "delete")) {
                 node_ctx.action = NODEACT_DELETE;
-            } else if (!strncasecmp(val, "add", 3)) {
+            } else if (!strcmp(val, "add")) {
                 node_ctx.action = NODEACT_ADD;
-            } else if (!strncasecmp(val, "change", 6)) {
+            } else if (!strcmp(val, "change")) {
                 node_ctx.action = NODEACT_CHANGE;
-            } else if (!strncasecmp(val, "replace", 6)) {
+            } else if (!strcmp(val, "replace")) {
                 node_ctx.action = NODEACT_REPLACE;
             } else {
                 node_ctx.action = NODEACT_UNKNOWN;
             }
-        } else if (!strncmp(t, "Node-copyfrom-path", 18)) {
-            node_ctx.src = strdup(&t[20]);
+        } else if (!strcmp(t, "Node-copyfrom-path")) {
+            node_ctx.src = strdup(val);
             fprintf(stderr, "Node copy path: %s\n", node_ctx.src);
-        } else if (!strncmp(t, "Node-copyfrom-rev", 17)) {
-            val = &t[19];
+        } else if (!strcmp(t, "Node-copyfrom-rev")) {
             node_ctx.srcRev = atoi(val);
             fprintf(stderr, "Node copy revision: %d\n", node_ctx.srcRev);
-        } else if (!strncmp(t, "Text-content-length:", 20)) {
-            val = &t[21];
+        } else if (!strcmp(t, "Text-content-length")) {
             node_ctx.textLength = atoi(val);
             fprintf(stderr, "Text content length: %d\n", node_ctx.textLength);
-        } else if (!strncmp(t, "Prop-content-length:", 20)) {
-            val = &t[21];
+        } else if (!strcmp(t, "Prop-content-length")) {
             node_ctx.propLength = atoi(val);
             fprintf(stderr, "Prop content length: %d\n", node_ctx.propLength);
-        } else if (!strncmp(t, "Content-length:", 15)) {
+        } else if (!strcmp(t, "Content-length")) {
+            len = atoi(val);
             buffer_read_line();
             if (active_ctx == REV_CTX) {
                 read_props();
             } else if (active_ctx == NODE_CTX) {
-                if (node_ctx.propLength > 0) {
-                    read_props();
-                }
-
                 handle_node();
-
-                if (node_ctx.mark) {
-                    repo_copy_blob(node_ctx.type, node_ctx.mark, node_ctx.textLength);
-                } else if (node_ctx.textLength > 0) {
-                    buffer_skip_bytes(node_ctx.textLength);
-                }
-
                 active_ctx = REV_CTX;
+            } else {
+                fprintf(stderr, "Unexpected content length header!\n");
+                buffer_skip_bytes(len);
             }
         }
     } 
