@@ -133,13 +133,10 @@ static void read_props(void)
             val = buffer_read_string(len);
             if (!strcmp(key, "svn:log")) {
                 rev_ctx.descr = val;
-                fprintf(stderr, "Log: %s\n", rev_ctx.descr);
             } else if (!strcmp(key, "svn:author")) {
                 rev_ctx.author = val;
-                fprintf(stderr, "Author: %s\n", rev_ctx.author);
             } else if (!strcmp(key, "svn:date")) {
                 rev_ctx.date = val;
-                fprintf(stderr, "Date: %s\n", rev_ctx.date);
                 strptime(rev_ctx.date, "%FT%T", &tm);
                 timezone = 0;
                 tm.tm_isdst = 0;
@@ -148,12 +145,10 @@ static void read_props(void)
                 if (node_ctx.type == REPO_MODE_BLB) {
                     node_ctx.type = REPO_MODE_EXE;
                 }
-                fprintf(stderr, "Executable: %s\n", val);
             } else if (!strcmp(key, "svn:special")) {
                 if (node_ctx.type == REPO_MODE_BLB) {
                     node_ctx.type = REPO_MODE_LNK;
                 }
-                fprintf(stderr, "Special: %s\n", val);
             }
             key = "";
             buffer_read_line();
@@ -229,11 +224,9 @@ static void svndump_read(char * url)
             if (active_ctx != DUMP_CTX) handle_revision();
             active_ctx = REV_CTX;
             reset_rev_ctx(atoi(val));
-            fprintf(stderr, "Revision: %d\n", rev_ctx.revision);
         } else if (!strcmp(t, "Node-path")) {
             active_ctx = NODE_CTX;
             reset_node_ctx(val);
-            fprintf(stderr, "Node path: %s\n", node_ctx.dst);
         } else if (!strcmp(t, "Node-kind")) {
             if (!strcmp(val, "dir")) {
                 node_ctx.type = REPO_MODE_DIR;
@@ -252,20 +245,17 @@ static void svndump_read(char * url)
             } else if (!strcmp(val, "replace")) {
                 node_ctx.action = NODEACT_REPLACE;
             } else {
+                fprintf(stderr, "Unknown node-action: %s\n", val);
                 node_ctx.action = NODEACT_UNKNOWN;
             }
         } else if (!strcmp(t, "Node-copyfrom-path")) {
             node_ctx.src = strdup(val);
-            fprintf(stderr, "Node copy path: %s\n", node_ctx.src);
         } else if (!strcmp(t, "Node-copyfrom-rev")) {
             node_ctx.srcRev = atoi(val);
-            fprintf(stderr, "Node copy revision: %d\n", node_ctx.srcRev);
         } else if (!strcmp(t, "Text-content-length")) {
             node_ctx.textLength = atoi(val);
-            fprintf(stderr, "Text content length: %d\n", node_ctx.textLength);
         } else if (!strcmp(t, "Prop-content-length")) {
             node_ctx.propLength = atoi(val);
-            fprintf(stderr, "Prop content length: %d\n", node_ctx.propLength);
         } else if (!strcmp(t, "Content-length")) {
             len = atoi(val);
             buffer_read_line();
@@ -275,7 +265,7 @@ static void svndump_read(char * url)
                 handle_node();
                 active_ctx = REV_CTX;
             } else {
-                fprintf(stderr, "Unexpected content length header!\n");
+                fprintf(stderr, "Unexpected content length header: %d\n", len);
                 buffer_skip_bytes(len);
             }
         }
