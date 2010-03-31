@@ -123,9 +123,7 @@ static void read_props(void)
     char *key = "";
     char *val = "";
     char *t;
-    for (t = buffer_read_line();
-         t && strncasecmp(t, "PROPS-END", 9);
-         t = buffer_read_line()) {
+    while ((t = buffer_read_line()) && strcmp(t, "PROPS-END")) {
         if (!strncmp(t, "K ", 2)) {
             len = atoi(&t[2]);
             key = buffer_read_string(len);
@@ -219,7 +217,7 @@ static void svndump_read(char * url)
     int len;
 
     reset_dump_ctx(url);
-    for (t = buffer_read_line(); t; t = buffer_read_line()) {
+    while (t = buffer_read_line()) {
         val = strstr(t, ": ");
         if (!val) continue;
         *val++ = '\0';
