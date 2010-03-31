@@ -63,8 +63,48 @@
 /* unknown action */
 #define NODEACT_UNKNOWN -1
 
-static char *uuid = NULL;
-static char *url = NULL;
+static struct {
+    int32_t action, propLength, textLength;
+    uint32_t srcRev, srcMode, mark, type;
+    char *src, *dst;
+} node_ctx;
+
+static struct {
+    uint32_t revision;
+    time_t timestamp;
+    char *descr, *author, *date;
+} rev_ctx;
+
+static struct {
+    char *uuid, *url;
+} dump_ctx;
+
+static void reset_node_ctx(char * fname)
+{
+    node_ctx.type = 0;
+    node_ctx.action = NODEACT_UNKNOWN;
+    node_ctx.propLength = -1;
+    node_ctx.textLength = -1;
+    node_ctx.src = NULL;
+    node_ctx.srcRev = 0;
+    node_ctx.srcMode = 0;
+    node_ctx.dst = strdup(fname);
+    node_ctx.mark = 0;
+}
+
+static void reset_rev_ctx(uint32_t revision)
+{
+    rev_ctx.revision = revision;
+    rev_ctx.timestamp = 0;
+    rev_ctx.descr = "";
+    rev_ctx.author = "nobody";
+    rev_ctx.date = "now";
+}
+
+static void reset_dump_ctx(char * url) {
+    dump_ctx.url = url;
+    dump_ctx.uuid = NULL;
+}
 
 static uint32_t next_blob_mark(void)
 {
@@ -75,19 +115,12 @@ static uint32_t next_blob_mark(void)
 /* read a modified file (node) within a revision */
 static void svnnode_read(char *fname)
 {
-    int type = 0;
-    int action = NODEACT_UNKNOWN;
-    int propLength = -1;
-    int textLength = -1;
-    char *src = NULL;
-    int srcRev = 0;
-    uint32_t srcMode;
-    char *dst = strdup(fname);
     char *t;
     int len;
     char *key;
     char *val;
-    uint32_t mark = 0;
+
+    reset_node_ctx(fname);
 
     fprintf(stderr, "Node path: %s\n", fname);
 
@@ -97,47 +130,44 @@ static void svnnode_read(char *fname)
         if (!strncmp(t, "Node-kind:", 10)) {
             val = &t[11];
             if (!strncasecmp(val, "dir", 3)) {
-                type = REPO_MODE_DIR;
+                node_ctx.type = REPO_MODE_DIR;
             } else if (!strncasecmp(val, "file", 4)) {
-                type = REPO_MODE_BLB;
+                node_ctx.type = REPO_MODE_BLB;
             } else {
                 fprintf(stderr, "Unknown node-kind: %s\n", val);
             }
         } else if (!strncmp(t, "Node-action", 11)) {
             val = &t[13];
-            if (!strncasecmp(val, "delete", 6))
-                action = NODEACT_DELETE;
-
-            else if (!strncasecmp(val, "add", 3))
-                action = NODEACT_ADD;
-
-            else if (!strncasecmp(val, "change", 6))
-                action = NODEACT_CHANGE;
-
-            else if (!strncasecmp(val, "replace", 6))
-                action = NODEACT_REPLACE;
-
-            else
-                action = NODEACT_UNKNOWN;
+            if (!strncasecmp(val, "delete", 6)) {
+                node_ctx.action = NODEACT_DELETE;
+            } else if (!strncasecmp(val, "add", 3)) {
+                node_ctx.action = NODEACT_ADD;
+            } else if (!strncasecmp(val, "change", 6)) {
+                node_ctx.action = NODEACT_CHANGE;
+            } else if (!strncasecmp(val, "replace", 6)) {
+                node_ctx.action = NODEACT_REPLACE;
+            } else {
+                node_ctx.action = NODEACT_UNKNOWN;
+            }
         } else if (!strncmp(t, "Node-copyfrom-path", 18)) {
-            src = strdup(&t[20]);
-            fprintf(stderr, "Node copy path: %s\n", src);
+            node_ctx.src = strdup(&t[20]);
+            fprintf(stderr, "Node copy path: %s\n", node_ctx.src);
         } else if (!strncmp(t, "Node-copyfrom-rev", 17)) {
             val = &t[19];
-            srcRev = atoi(val);
-            fprintf(stderr, "Node copy revision: %d\n", srcRev);
+            node_ctx.srcRev = atoi(val);
+            fprintf(stderr, "Node copy revision: %d\n", node_ctx.srcRev);
         } else if (!strncmp(t, "Text-content-length:", 20)) {
             val = &t[21];
-            textLength = atoi(val);
-            fprintf(stderr, "Text content length: %d\n", textLength);
+            node_ctx.textLength = atoi(val);
+            fprintf(stderr, "Text content length: %d\n", node_ctx.textLength);
         } else if (!strncmp(t, "Prop-content-length:", 20)) {
             val = &t[21];
-            propLength = atoi(val);
-            fprintf(stderr, "Prop content length: %d\n", propLength);
+            node_ctx.propLength = atoi(val);
+            fprintf(stderr, "Prop content length: %d\n", node_ctx.propLength);
         }
     }
 
-    if (propLength > 0) {
+    if (node_ctx.propLength > 0) {
         for (t = buffer_read_line();
              t && strncasecmp(t, "PROPS-END", 9);
              t = buffer_read_line()) {
@@ -149,13 +179,13 @@ static void svnnode_read(char *fname)
                 len = atoi(&t[2]);
                 val = buffer_read_string(len);
                 if (!strcmp(key, "svn:executable")) {
-                    if (type == REPO_MODE_BLB) {
-                        type = REPO_MODE_EXE;
+                    if (node_ctx.type == REPO_MODE_BLB) {
+                        node_ctx.type = REPO_MODE_EXE;
                     }
                     fprintf(stderr, "Executable: %s\n", val);
                 } else if (!strcmp(key, "svn:special")) {
-                    if (type == REPO_MODE_BLB) {
-                        type = REPO_MODE_LNK;
+                    if (node_ctx.type == REPO_MODE_BLB) {
+                        node_ctx.type = REPO_MODE_LNK;
                     }
                     fprintf(stderr, "Special: %s\n", val);
                 }
@@ -165,41 +195,41 @@ static void svnnode_read(char *fname)
         }
     }
 
-    if (src && srcRev) {
-        srcMode = repo_copy(srcRev, src, dst);
+    if (node_ctx.src && node_ctx.srcRev) {
+        node_ctx.srcMode = repo_copy(node_ctx.srcRev, node_ctx.src, node_ctx.dst);
     }
 
-    if (textLength >= 0 && type != REPO_MODE_DIR) {
-        mark = next_blob_mark();
+    if (node_ctx.textLength >= 0 && node_ctx.type != REPO_MODE_DIR) {
+        node_ctx.mark = next_blob_mark();
     }
 
-    if (action == NODEACT_DELETE) {
-        repo_delete(dst);
-    } else if (action == NODEACT_CHANGE || 
-               action == NODEACT_REPLACE) {
-        if (propLength >= 0 && textLength >= 0) {
-            repo_modify(dst, type, mark);
-        } else if (textLength >= 0) {
-            srcMode = repo_replace(dst, mark);
+    if (node_ctx.action == NODEACT_DELETE) {
+        repo_delete(node_ctx.dst);
+    } else if (node_ctx.action == NODEACT_CHANGE || 
+               node_ctx.action == NODEACT_REPLACE) {
+        if (node_ctx.propLength >= 0 && node_ctx.textLength >= 0) {
+            repo_modify(node_ctx.dst, node_ctx.type, node_ctx.mark);
+        } else if (node_ctx.textLength >= 0) {
+            node_ctx.srcMode = repo_replace(node_ctx.dst, node_ctx.mark);
         }
-    } else if (action == NODEACT_ADD) {
-        if (src && srcRev && propLength < 0 && textLength >= 0) {
-            srcMode = repo_replace(dst, mark);
-        } else if(type == REPO_MODE_DIR || textLength >= 0){
-            repo_add(dst, type, mark);
+    } else if (node_ctx.action == NODEACT_ADD) {
+        if (node_ctx.src && node_ctx.srcRev && node_ctx.propLength < 0 && node_ctx.textLength >= 0) {
+            node_ctx.srcMode = repo_replace(node_ctx.dst, node_ctx.mark);
+        } else if(node_ctx.type == REPO_MODE_DIR || node_ctx.textLength >= 0){
+            repo_add(node_ctx.dst, node_ctx.type, node_ctx.mark);
         }
     }
 
-    if (propLength < 0 && srcMode) {
-        type = srcMode;
+    if (node_ctx.propLength < 0 && node_ctx.srcMode) {
+        node_ctx.type = node_ctx.srcMode;
     }
 
-    if(textLength == -1) textLength = 0;
+    if(node_ctx.textLength == -1) node_ctx.textLength = 0;
 
-    if (mark) {
-        repo_copy_blob(type, mark, textLength);
+    if (node_ctx.mark) {
+        repo_copy_blob(node_ctx.type, node_ctx.mark, node_ctx.textLength);
     } else {
-        buffer_skip_bytes(textLength);
+        buffer_skip_bytes(node_ctx.textLength);
     }
 }
 
@@ -207,14 +237,12 @@ static void svnnode_read(char *fname)
 static void svnrev_read(uint32_t number)
 {
     struct tm tm;
-    time_t timestamp = 0;
-    char *descr = "";
-    char *author = "nobody";
-    char *date = "now";
     char *t;
     int len;
     char *key = "";
     char *val = "";
+
+    reset_rev_ctx(number);
 
     fprintf(stderr, "Revision: %d\n", number);
 
@@ -229,18 +257,18 @@ static void svnrev_read(uint32_t number)
             len = atoi(&t[2]);
             val = buffer_read_string(len);
             if (!strcmp(key, "svn:log")) {
-                descr = val;
-                fprintf(stderr, "Log: %s\n", descr);
+                rev_ctx.descr = val;
+                fprintf(stderr, "Log: %s\n", rev_ctx.descr);
             } else if (!strcmp(key, "svn:author")) {
-                author = val;
-                fprintf(stderr, "Author: %s\n", author);
+                rev_ctx.author = val;
+                fprintf(stderr, "Author: %s\n", rev_ctx.author);
             } else if (!strcmp(key, "svn:date")) {
-                date = val;
-                fprintf(stderr, "Date: %s\n", date);
-                strptime(date, "%FT%T", &tm);
+                rev_ctx.date = val;
+                fprintf(stderr, "Date: %s\n", rev_ctx.date);
+                strptime(rev_ctx.date, "%FT%T", &tm);
                 timezone = 0;
                 tm.tm_isdst = 0;
-                timestamp = mktime(&tm);
+                rev_ctx.timestamp = mktime(&tm);
             }
             key = "";
             buffer_read_line();
@@ -257,27 +285,27 @@ static void svnrev_read(uint32_t number)
     if (t)
         buffer_push_line();
 
-    repo_commit(number, author, descr, uuid, url, timestamp);
+    repo_commit(rev_ctx.revision, rev_ctx.author, rev_ctx.descr, dump_ctx.uuid, dump_ctx.url, rev_ctx.timestamp);
 }
 
 /* create dump representation by importing dump file */
-static void svndump_read(void)
+static void svndump_read(char * url)
 {
     char *t;
     int revision;
+    reset_dump_ctx(url);
     for (t = buffer_read_line(); t; t = buffer_read_line()) {
         if (!strncmp(t, "Revision-number:", 16)) {
             revision = atoi(&t[17]);
             svnrev_read(revision);
         } else if(!strncmp(t, "UUID:", 5)) {
-            uuid = strdup(&t[6]);
+            dump_ctx.uuid = strdup(&t[6]);
         }
     } 
 }
 
 int main(int argc, char **argv)
 {
-    if (argc > 1) url = argv[1];
-    svndump_read();
+    svndump_read((argc > 1) ? argv[1] : NULL);
     return 0;
 }
