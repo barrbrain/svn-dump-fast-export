@@ -48,30 +48,23 @@
 #include "repo_tree.h"
 #include "line_buffer.h"
 
-/**
- * node was replaced
- */
+/* node was replaced */
 #define NODEACT_REPLACE 3
 
-/**
- * node was deleted
- */
+/* node was deleted */
 #define NODEACT_DELETE 2
 
-/**
- * node was added or copied from other location
- */
+/* node was added or copied from other location */
 #define NODEACT_ADD 1
 
-/**
- * node was modified
- */
+/* node was modified */
 #define NODEACT_CHANGE 0
 
-/**
- * unknown action
- */
+/* unknown action */
 #define NODEACT_UNKNOWN -1
+
+static char *uuid = NULL;
+static char *url = NULL;
 
 static uint32_t next_blob_mark(void)
 {
@@ -79,9 +72,7 @@ static uint32_t next_blob_mark(void)
     return mark++;
 }
 
-/**
- * read a modified file (node) within a revision
- */
+/* read a modified file (node) within a revision */
 static void svnnode_read(char *fname)
 {
     int type = 0;
@@ -219,14 +210,7 @@ static void svnnode_read(char *fname)
     }
 }
 
-static char *uuid = NULL;
-static char *url = NULL;
-
-
-/**
- * create revision reading from stdin
- * param number revision number
- */
+/* create revision reading from stdin */
 static void svnrev_read(uint32_t number)
 {
     struct tm tm;
@@ -283,9 +267,7 @@ static void svnrev_read(uint32_t number)
     repo_commit(number, author, descr, uuid, url, timestamp);
 }
 
-/*
- * create dump representation by importing dump file
- */
+/* create dump representation by importing dump file */
 static void svndump_read(void)
 {
     char *t;
