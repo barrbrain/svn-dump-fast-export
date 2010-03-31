@@ -63,6 +63,10 @@
 /* unknown action */
 #define NODEACT_UNKNOWN -1
 
+#define DUMP_CTX 0
+#define REV_CTX  1
+#define NODE_CTX 2
+
 static struct {
     int32_t action, propLength, textLength;
     uint32_t srcRev, srcMode, mark, type;
@@ -205,10 +209,6 @@ static void handle_revision(void)
 {
     repo_commit(rev_ctx.revision, rev_ctx.author, rev_ctx.descr, dump_ctx.uuid, dump_ctx.url, rev_ctx.timestamp);
 }
-
-#define DUMP_CTX 0
-#define REV_CTX  1
-#define NODE_CTX 2
 
 /* create dump representation by importing dump file */
 static void svndump_read(char * url)
