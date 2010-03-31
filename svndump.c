@@ -193,13 +193,6 @@ static void skip_bytes(int len)
     }
 }
 
-static int strendswith(char *s, char *end)
-{
-    int end_len = strlen(end);
-    int s_len = strlen(s);
-    return s_len >= end_len && !strcmp(&s[s_len - end_len], end);
-}
-
 static uint32_t next_blob_mark(void)
 {
     static int32_t mark = 1000000000;
@@ -284,12 +277,12 @@ static void svnnode_read(char *fname)
             } else if (!strncmp(t, "V ", 2)) {
                 len = atoi(&t[2]);
                 val = svndump_read_string(len);
-                if (strendswith(key, ":executable")) {
+                if (!strcmp(key, "svn:executable")) {
                     if (type == REPO_MODE_BLB) {
                         type = REPO_MODE_EXE;
                     }
                     fprintf(stderr, "Executable: %s\n", val);
-                } else if (strendswith(key, ":special")) {
+                } else if (!strcmp(key, "svn:special")) {
                     if (type == REPO_MODE_BLB) {
                         type = REPO_MODE_LNK;
                     }
@@ -378,13 +371,13 @@ static void svnrev_read(uint32_t number)
         } else if (!strncmp(t, "V ", 2)) {
             len = atoi(&t[2]);
             val = svndump_read_string(len);
-            if (strendswith(key, ":log")) {
+            if (!strcmp(key, "svn:log")) {
                 descr = val;
                 fprintf(stderr, "Log: %s\n", descr);
-            } else if (strendswith(key, ":author")) {
+            } else if (!strcmp(key, "svn:author")) {
                 author = val;
                 fprintf(stderr, "Author: %s\n", author);
-            } else if (strendswith(key, ":date")) {
+            } else if (!strcmp(key, "svn:date")) {
                 date = val;
                 fprintf(stderr, "Date: %s\n", date);
                 strptime(date, "%FT%T", &tm);
