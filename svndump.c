@@ -44,7 +44,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+
 #include "repo_tree.h"
+#include "line_buffer.h"
 
 /**
  * node was replaced
@@ -70,128 +72,6 @@
  * unknown action
  */
 #define NODEACT_UNKNOWN -1
-
-static char line_buffer[10000];
-static int line_buffer_len = 0;
-static int line_len = 0;
-
-/*
- * read string up to newline from input stream
- * return all characters except the newline
- */
-static char *svndump_read_line(void)
-{
-    char *res;
-    char *end;
-    int n_read;
-
-    if (line_len) {
-        memmove(line_buffer, &line_buffer[line_len],
-                line_buffer_len - line_len);
-        line_buffer_len -= line_len;
-        line_len = 0;
-    }
-
-    end = memchr(line_buffer, '\n', line_buffer_len);
-    while (line_buffer_len < 9999 && !feof(stdin) && NULL == end) {
-        n_read =
-            fread(&line_buffer[line_buffer_len], 1, 9999 - line_buffer_len,
-                  stdin);
-        end = memchr(&line_buffer[line_buffer_len], '\n', n_read);
-        line_buffer_len += n_read;
-    }
-
-    if (ferror(stdin))
-        return NULL;
-
-    if (end != NULL) {
-        line_len = end - line_buffer;
-        line_buffer[line_len++] = '\0';
-    } else {
-        line_len = line_buffer_len;
-        line_buffer[line_buffer_len] = '\0';
-    }
-
-    if (line_len == 0)
-        return NULL;
-
-    return line_buffer;
-}
-
-/*
- * so a line can be pushed-back after read
- */
-static void svndump_pushBackInputLine()
-{
-    if (line_len) {
-        if (line_buffer[line_len - 1] == '\0')
-            line_buffer[line_len - 1] = '\n';
-        line_buffer[line_buffer_len] = '\0';
-        line_len = 0;
-    }
-}
-
-static char *svndump_read_string(int len)
-{
-    char *s = malloc(len + 1);
-    int offset = 0;
-    if (line_buffer_len > line_len) {
-        offset = line_buffer_len - line_len;
-        if (offset > len)
-            offset = len;
-        memcpy(s, &line_buffer[line_len], offset);
-        line_len += offset;
-    }
-    while (offset < len && !feof(stdin)) {
-        offset += fread(&s[offset], 1, len - offset, stdin);
-    }
-    s[offset] = '\0';
-    return s;
-}
-
-char byte_buffer[4096];
-static void copy_bytes(int len)
-{
-    int in, out;
-    if (line_buffer_len > line_len) {
-        in = line_buffer_len - line_len;
-        if (in > len)
-            in = len;
-        out = 0;
-        while (out < in && !ferror(stdout)) {
-            out +=
-                fwrite(&line_buffer[line_len + out], 1, in - out, stdout);
-        }
-        len -= in;
-        line_len += in;
-    }
-    while (len > 0 && !feof(stdin)) {
-        in = len < 4096 ? len : 4096;
-        in = fread(byte_buffer, 1, in, stdin);
-        len -= in;
-        out = 0;
-        while (out < in && !ferror(stdout)) {
-            out += fwrite(&byte_buffer[out], 1, in - out, stdout);
-        }
-    }
-}
-
-static void skip_bytes(int len)
-{
-    int in;
-    if (line_buffer_len > line_len) {
-        in = line_buffer_len - line_len;
-        if (in > len)
-            in = len;
-        line_len += in;
-        len -= in;
-    }
-    while (len > 0 && !feof(stdin)) {
-        in = len < 4096 ? len : 4096;
-        in = fread(byte_buffer, 1, in, stdin);
-        len -= in;
-    }
-}
 
 static uint32_t next_blob_mark(void)
 {
@@ -220,9 +100,9 @@ static void svnnode_read(char *fname)
 
     fprintf(stderr, "Node path: %s\n", fname);
 
-    for (t = svndump_read_line();
+    for (t = buffer_read_line();
          t && *t;
-         t = svndump_read_line()) {
+         t = buffer_read_line()) {
         if (!strncmp(t, "Node-kind:", 10)) {
             val = &t[11];
             if (!strncasecmp(val, "dir", 3)) {
@@ -267,16 +147,16 @@ static void svnnode_read(char *fname)
     }
 
     if (propLength > 0) {
-        for (t = svndump_read_line();
+        for (t = buffer_read_line();
              t && strncasecmp(t, "PROPS-END", 9);
-             t = svndump_read_line()) {
+             t = buffer_read_line()) {
             if (!strncmp(t, "K ", 2)) {
                 len = atoi(&t[2]);
-                key = svndump_read_string(len);
-                svndump_read_line();
+                key = buffer_read_string(len);
+                buffer_read_line();
             } else if (!strncmp(t, "V ", 2)) {
                 len = atoi(&t[2]);
-                val = svndump_read_string(len);
+                val = buffer_read_string(len);
                 if (!strcmp(key, "svn:executable")) {
                     if (type == REPO_MODE_BLB) {
                         type = REPO_MODE_EXE;
@@ -289,7 +169,7 @@ static void svnnode_read(char *fname)
                     fprintf(stderr, "Special: %s\n", val);
                 }
                 key = "";
-                svndump_read_line();
+                buffer_read_line();
             }
         }
     }
@@ -328,14 +208,14 @@ static void svnnode_read(char *fname)
     if (mark) {
         if (type == REPO_MODE_LNK) {
             /* svn symlink blobs start with "link " */
-            skip_bytes(5);
+            buffer_skip_bytes(5);
             textLength -= 5;
         }
         printf("blob\nmark :%d\ndata %d\n", mark, textLength);
-        copy_bytes(textLength);
+        buffer_copy_bytes(textLength);
         fputc('\n', stdout);
     } else {
-        skip_bytes(textLength);
+        buffer_skip_bytes(textLength);
     }
 }
 
@@ -361,16 +241,16 @@ static void svnrev_read(uint32_t number)
 
     fprintf(stderr, "Revision: %d\n", number);
 
-    for (t = svndump_read_line();
+    for (t = buffer_read_line();
          t && strncasecmp(t, "PROPS-END", 9);
-         t = svndump_read_line()) {
+         t = buffer_read_line()) {
         if (!strncmp(t, "K ", 2)) {
             len = atoi(&t[2]);
-            key = svndump_read_string(len);
-            svndump_read_line();
+            key = buffer_read_string(len);
+            buffer_read_line();
         } else if (!strncmp(t, "V ", 2)) {
             len = atoi(&t[2]);
-            val = svndump_read_string(len);
+            val = buffer_read_string(len);
             if (!strcmp(key, "svn:log")) {
                 descr = val;
                 fprintf(stderr, "Log: %s\n", descr);
@@ -386,19 +266,19 @@ static void svnrev_read(uint32_t number)
                 timestamp = mktime(&tm);
             }
             key = "";
-            svndump_read_line();
+            buffer_read_line();
         }
     }
 
     for ( ;
          t && strncmp(t, "Revision-number:", 16);
-         t = svndump_read_line()) {
+         t = buffer_read_line()) {
         if (!strncmp(t, "Node-path:", 10)) {
             svnnode_read(&t[11]);
         }
     }
     if (t)
-        svndump_pushBackInputLine();
+        buffer_push_line();
 
     repo_commit(number, author, descr, uuid, url, timestamp);
 }
@@ -410,7 +290,7 @@ static void svndump_read(void)
 {
     char *t;
     int revision;
-    for (t = svndump_read_line(); t; t = svndump_read_line()) {
+    for (t = buffer_read_line(); t; t = buffer_read_line()) {
         if (!strncmp(t, "Revision-number:", 16)) {
             revision = atoi(&t[17]);
             svnrev_read(revision);
