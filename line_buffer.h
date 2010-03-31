@@ -34,8 +34,6 @@
 
 char *buffer_read_line(void);
 
-void buffer_push_line();
-
 char *buffer_read_string(int len);
 
 void buffer_copy_bytes(int len);

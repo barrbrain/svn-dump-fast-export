@@ -78,16 +78,6 @@ char *buffer_read_line(void)
     return line_buffer;
 }
 
-void buffer_push_line()
-{
-    if (line_len) {
-        if (line_buffer[line_len - 1] == '\0')
-            line_buffer[line_len - 1] = '\n';
-        line_buffer[line_buffer_len] = '\0';
-        line_len = 0;
-    }
-}
-
 char *buffer_read_string(int len)
 {
     char *s = malloc(len + 1);
