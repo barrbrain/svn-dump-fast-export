@@ -240,7 +240,6 @@ uint32_t repo_copy(uint32_t revision, char *src, char *dst)
 {
     uint32_t mode = 0, content_offset = 0;
     repo_dirent_t *src_dirent;
-    fprintf(stderr, "C %d:%s %s\n", revision, src, dst);
     src_dirent = repo_read_dirent(revision, src);
     if (src_dirent != NULL) {
         mode = src_dirent->mode;
@@ -252,7 +251,6 @@ uint32_t repo_copy(uint32_t revision, char *src, char *dst)
 
 void repo_add(char *path, uint32_t mode, uint32_t blob_mark)
 {
-    fprintf(stderr, "A %s %d\n", path, blob_mark);
     repo_write_dirent(path, mode, blob_mark, 0);
 }
 
@@ -263,7 +261,6 @@ uint32_t repo_replace(char *path, uint32_t blob_mark)
     src_dirent = repo_read_dirent(active_commit, path);
     if (src_dirent != NULL) {
         mode = src_dirent->mode;
-        fprintf(stderr, "R %s %06o %d\n", path, mode, blob_mark);
         repo_write_dirent(path, mode, blob_mark, 0);
     }
     return mode;
@@ -271,13 +268,11 @@ uint32_t repo_replace(char *path, uint32_t blob_mark)
 
 void repo_modify(char *path, uint32_t mode, uint32_t blob_mark)
 {
-    fprintf(stderr, "M %s %d\n", path, blob_mark);
     repo_write_dirent(path, mode, blob_mark, 0);
 }
 
 void repo_delete(char *path)
 {
-    fprintf(stderr, "D %s\n", path);
     repo_write_dirent(path, 0, 0, 1);
 }
 
@@ -408,7 +403,6 @@ static void repo_git_commit(uint32_t revision, char * author, char * log,
 void repo_commit(uint32_t revision, char * author, char * log, char * uuid,
                  char * url, time_t timestamp)
 {
-    fprintf(stderr, "R %d\n", revision);
     if (revision == 0) {
         active_commit = commit_alloc(1);
         commit_pointer(active_commit)->root_dir_offset =

@@ -56,9 +56,11 @@ char *buffer_read_line(void)
     }
 
     end = memchr(line_buffer, '\n', line_buffer_len);
-    while (line_buffer_len < LINE_BUFFER_LEN - 1 && !feof(stdin) && NULL == end) {
+    while (line_buffer_len < LINE_BUFFER_LEN - 1 &&
+           !feof(stdin) && NULL == end) {
         n_read =
-            fread(&line_buffer[line_buffer_len], 1, LINE_BUFFER_LEN - 1 - line_buffer_len,
+            fread(&line_buffer[line_buffer_len], 1,
+                  LINE_BUFFER_LEN - 1 - line_buffer_len,
                   stdin);
         end = memchr(&line_buffer[line_buffer_len], '\n', n_read);
         line_buffer_len += n_read;
