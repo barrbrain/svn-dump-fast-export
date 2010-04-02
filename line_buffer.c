@@ -35,7 +35,10 @@
 
 #include "line_buffer.h"
 
-static char line_buffer[10000];
+#define LINE_BUFFER_LEN 10000
+#define COPY_BUFFER_LEN 4096
+
+static char line_buffer[LINE_BUFFER_LEN];
 static int line_buffer_len = 0;
 static int line_len = 0;
 
@@ -53,9 +56,9 @@ char *buffer_read_line(void)
     }
 
     end = memchr(line_buffer, '\n', line_buffer_len);
-    while (line_buffer_len < 9999 && !feof(stdin) && NULL == end) {
+    while (line_buffer_len < LINE_BUFFER_LEN - 1 && !feof(stdin) && NULL == end) {
         n_read =
-            fread(&line_buffer[line_buffer_len], 1, 9999 - line_buffer_len,
+            fread(&line_buffer[line_buffer_len], 1, LINE_BUFFER_LEN - 1 - line_buffer_len,
                   stdin);
         end = memchr(&line_buffer[line_buffer_len], '\n', n_read);
         line_buffer_len += n_read;
@@ -96,7 +99,7 @@ char *buffer_read_string(int len)
     return s;
 }
 
-static char byte_buffer[4096];
+static char byte_buffer[COPY_BUFFER_LEN];
 void buffer_copy_bytes(int len)
 {
     int in, out;
@@ -113,7 +116,7 @@ void buffer_copy_bytes(int len)
         line_len += in;
     }
     while (len > 0 && !feof(stdin)) {
-        in = len < 4096 ? len : 4096;
+        in = len < COPY_BUFFER_LEN ? len : COPY_BUFFER_LEN;
         in = fread(byte_buffer, 1, in, stdin);
         len -= in;
         out = 0;
@@ -134,7 +137,7 @@ void buffer_skip_bytes(int len)
         len -= in;
     }
     while (len > 0 && !feof(stdin)) {
-        in = len < 4096 ? len : 4096;
+        in = len < COPY_BUFFER_LEN ? len : COPY_BUFFER_LEN;
         in = fread(byte_buffer, 1, in, stdin);
         len -= in;
     }
