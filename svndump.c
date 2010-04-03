@@ -48,24 +48,19 @@
 #include "repo_tree.h"
 #include "line_buffer.h"
 
-/* node was replaced */
-#define NODEACT_REPLACE 3
-
-/* node was deleted */
-#define NODEACT_DELETE 2
-
-/* node was added or copied from other location */
-#define NODEACT_ADD 1
-
-/* node was modified */
-#define NODEACT_CHANGE 0
-
-/* unknown action */
-#define NODEACT_UNKNOWN -1
+#define NODEACT_REPLACE 4
+#define NODEACT_DELETE 3
+#define NODEACT_ADD 2
+#define NODEACT_CHANGE 1
+#define NODEACT_UNKNOWN 0
 
 #define DUMP_CTX 0
 #define REV_CTX  1
 #define NODE_CTX 2
+
+#define LENGTH_UNKNOWN (~0)
+
+#define BLOB_MARK_OFFSET 1000000000
 
 static struct {
     int32_t action, propLength, textLength;
@@ -87,8 +82,8 @@ static void reset_node_ctx(char * fname)
 {
     node_ctx.type = 0;
     node_ctx.action = NODEACT_UNKNOWN;
-    node_ctx.propLength = -1;
-    node_ctx.textLength = -1;
+    node_ctx.propLength = LENGTH_UNKNOWN;
+    node_ctx.textLength = LENGTH_UNKNOWN;
     node_ctx.src = NULL;
     node_ctx.srcRev = 0;
     node_ctx.srcMode = 0;
@@ -112,7 +107,7 @@ static void reset_dump_ctx(char * url) {
 
 static uint32_t next_blob_mark(void)
 {
-    static int32_t mark = 1000000000;
+    static uint32_t mark = BLOB_MARK_OFFSET;
     return mark++;
 }
 
@@ -158,15 +153,17 @@ static void read_props(void)
 
 static void handle_node(void)
 {
-    if (node_ctx.propLength > 0) {
+    if (node_ctx.propLength != LENGTH_UNKNOWN && node_ctx.propLength) {
         read_props();
     }
 
     if (node_ctx.src && node_ctx.srcRev) {
-        node_ctx.srcMode = repo_copy(node_ctx.srcRev, node_ctx.src, node_ctx.dst);
+        node_ctx.srcMode =
+            repo_copy(node_ctx.srcRev, node_ctx.src, node_ctx.dst);
     }
 
-    if (node_ctx.textLength >= 0 && node_ctx.type != REPO_MODE_DIR) {
+    if (node_ctx.textLength != LENGTH_UNKNOWN &&
+        node_ctx.type != REPO_MODE_DIR) {
         node_ctx.mark = next_blob_mark();
     }
 
@@ -174,36 +171,40 @@ static void handle_node(void)
         repo_delete(node_ctx.dst);
     } else if (node_ctx.action == NODEACT_CHANGE || 
                node_ctx.action == NODEACT_REPLACE) {
-        if (node_ctx.propLength >= 0 && node_ctx.textLength >= 0) {
+        if (node_ctx.propLength != LENGTH_UNKNOWN &&
+            node_ctx.textLength != LENGTH_UNKNOWN) {
             repo_modify(node_ctx.dst, node_ctx.type, node_ctx.mark);
         } else if (node_ctx.textLength >= 0) {
             node_ctx.srcMode = repo_replace(node_ctx.dst, node_ctx.mark);
         }
     } else if (node_ctx.action == NODEACT_ADD) {
-        if (node_ctx.src && node_ctx.srcRev && node_ctx.propLength < 0 && node_ctx.textLength >= 0) {
+        if (node_ctx.src && node_ctx.srcRev &&
+            node_ctx.propLength == LENGTH_UNKNOWN &&
+            node_ctx.textLength != LENGTH_UNKNOWN) {
             node_ctx.srcMode = repo_replace(node_ctx.dst, node_ctx.mark);
-        } else if(node_ctx.type == REPO_MODE_DIR || node_ctx.textLength >= 0){
+        } else if (node_ctx.type == REPO_MODE_DIR ||
+                   node_ctx.textLength != LENGTH_UNKNOWN){
             repo_add(node_ctx.dst, node_ctx.type, node_ctx.mark);
         }
     }
 
-    if (node_ctx.propLength < 0 && node_ctx.srcMode) {
+    if (node_ctx.propLength == LENGTH_UNKNOWN && node_ctx.srcMode) {
         node_ctx.type = node_ctx.srcMode;
     }
 
     if (node_ctx.mark) {
         repo_copy_blob(node_ctx.type, node_ctx.mark, node_ctx.textLength);
-    } else if (node_ctx.textLength > 0) {
+    } else if (node_ctx.textLength != LENGTH_UNKNOWN) {
         buffer_skip_bytes(node_ctx.textLength);
     }
 }
 
 static void handle_revision(void)
 {
-    repo_commit(rev_ctx.revision, rev_ctx.author, rev_ctx.descr, dump_ctx.uuid, dump_ctx.url, rev_ctx.timestamp);
+    repo_commit(rev_ctx.revision, rev_ctx.author, rev_ctx.descr, dump_ctx.uuid,
+                dump_ctx.url, rev_ctx.timestamp);
 }
 
-/* create dump representation by importing dump file */
 static void svndump_read(char * url)
 {
     char *val;

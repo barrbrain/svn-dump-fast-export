@@ -38,6 +38,7 @@
 #include "string_pool.h"
 #include "repo_tree.h"
 #include "obj_pool.h"
+#include "line_buffer.h"
 
 typedef struct repo_dirent_s repo_dirent_t;
 
