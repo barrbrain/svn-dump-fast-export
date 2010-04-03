@@ -63,8 +63,7 @@
 #define BLOB_MARK_OFFSET 1000000000
 
 static struct {
-    int32_t action, propLength, textLength;
-    uint32_t srcRev, srcMode, mark, type;
+    uint32_t action, propLength, textLength, srcRev, srcMode, mark, type;
     char *src, *dst;
 } node_ctx;
 
@@ -114,7 +113,7 @@ static uint32_t next_blob_mark(void)
 static void read_props(void)
 {
     struct tm tm;
-    int len;
+    uint32_t len;
     char *key = "";
     char *val = "";
     char *t;
@@ -209,8 +208,8 @@ static void svndump_read(char * url)
 {
     char *val;
     char *t;
-    int active_ctx = DUMP_CTX; 
-    int len;
+    uint32_t active_ctx = DUMP_CTX; 
+    uint32_t len;
 
     reset_dump_ctx(url);
     while (t = buffer_read_line()) {
