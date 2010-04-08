@@ -1,13 +1,9 @@
 #include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <time.h>
 
 #include "string_pool.h"
 #include "repo_tree.h"
 #include "obj_pool.h"
-#include "line_buffer.h"
+#include "fast_export.h"
 
 typedef struct repo_dirent_s repo_dirent_t;
 
@@ -71,21 +67,6 @@ static repo_dirent_t *repo_dirent_by_name(repo_dir_t * dir,
 static int repo_dirent_is_dir(repo_dirent_t * dirent)
 {
     return dirent != NULL && dirent->mode == REPO_MODE_DIR;
-}
-
-static int repo_dirent_is_blob(repo_dirent_t * dirent)
-{
-    return dirent->mode == REPO_MODE_BLB || dirent->mode == REPO_MODE_EXE;
-}
-
-static int repo_dirent_is_executable(repo_dirent_t * dirent)
-{
-    return dirent->mode == REPO_MODE_EXE;
-}
-
-static int repo_dirent_is_symlink(repo_dirent_t * dirent)
-{
-    return dirent->mode == REPO_MODE_LNK;
 }
 
 static repo_dir_t *repo_dir_from_dirent(repo_dirent_t * dirent)
@@ -179,7 +160,7 @@ repo_write_dirent(char *path, uint32_t mode, uint32_t content_offset,
             dir_o = dir_with_dirents_alloc(0);
             dirent->content_offset = dir_o;
             dir = dir_pointer(dir_o);
-        } else if (dir = repo_dir_from_dirent(dirent)) {
+        } else if ((dir = repo_dir_from_dirent(dirent))) {
             dirent_o = dirent_offset(dirent);
             dir = repo_clone_dir(dir, 0);
             if (dirent_o != ~0)
@@ -246,19 +227,6 @@ void repo_delete(char *path)
     repo_write_dirent(path, 0, 0, 1);
 }
 
-static void repo_print_path(uint32_t depth, uint32_t * path)
-{
-    pool_print_seq(depth, path, '/', stdout);
-}
-
-static void repo_git_delete(uint32_t depth, uint32_t * path)
-{
-    putchar('D');
-    putchar(' ');
-    repo_print_path(depth, path);
-    putchar('\n');
-}
-
 static void
 repo_git_add_r(uint32_t depth, uint32_t * path, repo_dir_t * dir);
 
@@ -268,9 +236,7 @@ repo_git_add(uint32_t depth, uint32_t * path, repo_dirent_t * dirent)
     if (repo_dirent_is_dir(dirent)) {
         repo_git_add_r(depth, path, repo_dir_from_dirent(dirent));
     } else {
-        printf("M %06o :%d ", dirent->mode, dirent->content_offset);
-        repo_print_path(depth, path);
-        putchar('\n');
+        fast_export_modify(depth, path, dirent->mode, dirent->content_offset);
     }
 }
 
@@ -290,84 +256,54 @@ static void
 repo_diff_r(uint32_t depth, uint32_t * path, repo_dir_t * dir1,
             repo_dir_t * dir2)
 {
-    uint32_t o1, o2, p;
-    repo_dirent_t *de1, *de2;
+    repo_dirent_t *de1, *de2, *max_de1, *max_de2;
     de1 = repo_first_dirent(dir1);
     de2 = repo_first_dirent(dir2);
-    for (o1 = o2 = 0; o1 < dir1->size && o2 < dir2->size;) {
-        if (de1[o1].name_offset < de2[o2].name_offset) {
-            /* delete(o1) */
-            path[depth] = de1[o1].name_offset;
-            repo_git_delete(depth + 1, path);
-            o1++;
-        } else if (de1[o1].name_offset == de2[o2].name_offset) {
-            path[depth] = de1[o1].name_offset;
-            if (de1[o1].content_offset != de2[o2].content_offset) {
-                if (repo_dirent_is_dir(&de1[o1])
-                    && repo_dirent_is_dir(&de2[o2])) {
-                    /* recursive diff */
+    max_de1 = &de1[dir1->size];
+    max_de2 = &de2[dir2->size];
+
+    while (de1 < max_de1 && de2 < max_de2) {
+        if (de1->name_offset < de2->name_offset) {
+            path[depth] = (de1++)->name_offset;
+            fast_export_delete(depth + 1, path);
+        } else if (de1->name_offset == de2->name_offset) {
+            path[depth] = de1->name_offset;
+            if (de1->content_offset != de2->content_offset) {
+                if (repo_dirent_is_dir(de1) && repo_dirent_is_dir(de2)) {
                     repo_diff_r(depth + 1, path,
-                                repo_dir_from_dirent(&de1[o1]),
-                                repo_dir_from_dirent(&de2[o2]));
+                                repo_dir_from_dirent(de1),
+                                repo_dir_from_dirent(de2));
                 } else {
-                    /* delete o1, add o2 */
-                    if (repo_dirent_is_dir(&de1[o1]) !=
-                        repo_dirent_is_dir(&de2[o2])) {
-                        repo_git_delete(depth + 1, path);
+                    if (repo_dirent_is_dir(de1) != repo_dirent_is_dir(de2)) {
+                        fast_export_delete(depth + 1, path);
                     }
-                    repo_git_add(depth + 1, path, &de2[o2]);
+                    repo_git_add(depth + 1, path, de2);
                 }
             }
-            o1++;
-            o2++;
+            de1++;
+            de2++;
         } else {
-            /* add(o2) */
-            path[depth] = de2[o2].name_offset;
-            repo_git_add(depth + 1, path, &de2[o2]);
-            o2++;
+            path[depth] = de2->name_offset;
+            repo_git_add(depth + 1, path, de2++);
         }
     }
-    for (; o1 < dir1->size; o1++) {
-        /* delete(o1) */
-        path[depth] = de1[o1].name_offset;
-        repo_git_delete(depth + 1, path);
+    while (de1 < max_de1) {
+        path[depth] = (de1++)->name_offset;
+        fast_export_delete(depth + 1, path);
     }
-    for (; o2 < dir2->size; o2++) {
-        /* add(o2) */
-        path[depth] = de2[o2].name_offset;
-        repo_git_add(depth + 1, path, &de2[o2]);
+    while (de2 < max_de2) {
+        path[depth] = de2->name_offset;
+        repo_git_add(depth + 1, path, de2++);
     }
 }
 
 static uint32_t path_stack[1000];
-static void repo_diff(uint32_t r1, uint32_t r2)
+void repo_diff(uint32_t r1, uint32_t r2)
 {
     repo_diff_r(0,
                 path_stack,
                 repo_commit_root_dir(commit_pointer(r1)),
                 repo_commit_root_dir(commit_pointer(r2)));
-}
-
-static char gitsvnline[4096];
-
-static void repo_git_commit(uint32_t revision, char * author, char * log,
-                            char * uuid, char * url, time_t timestamp)
-{
-    printf("commit refs/heads/master\nmark :%d\n", revision);
-    printf("committer %s <%s@%s> %ld +0000\n",
-         author, author, uuid ? uuid : "local", timestamp);
-    if (uuid && url) {
-        snprintf(gitsvnline, 4096, "\n\ngit-svn-id: %s@%d %s\n",
-             url, revision, uuid);
-    } else {
-        *gitsvnline = '\0';
-    }
-    printf("data %ld\n%s%s\n",
-           strlen(log) + strlen(gitsvnline), log, gitsvnline);
-    repo_diff(revision - 1, revision);
-    fputc('\n', stdout);
-
-    printf("progress Imported commit %d.\n\n", revision);
 }
 
 void repo_commit(uint32_t revision, char * author, char * log, char * uuid,
@@ -378,23 +314,11 @@ void repo_commit(uint32_t revision, char * author, char * log, char * uuid,
         commit_pointer(active_commit)->root_dir_offset =
             dir_with_dirents_alloc(0);
     } else {
-        repo_git_commit(revision, author, log, uuid, url, timestamp);
+        fast_export_commit(revision, author, log, uuid, url, timestamp);
     }
     num_dirs_saved = dir_pool.size;
     num_dirents_saved = dirent_pool.size;
     active_commit = commit_alloc(1);
     commit_pointer(active_commit)->root_dir_offset =
         commit_pointer(active_commit - 1)->root_dir_offset;
-}
-
-void repo_copy_blob(uint32_t mode, uint32_t mark, uint32_t len)
-{
-    if (mode == REPO_MODE_LNK) {
-        /* svn symlink blobs start with "link " */
-        buffer_skip_bytes(5);
-        len -= 5;
-    }
-    printf("blob\nmark :%d\ndata %d\n", mark, len);
-    buffer_copy_bytes(len);
-    fputc('\n', stdout);
 }

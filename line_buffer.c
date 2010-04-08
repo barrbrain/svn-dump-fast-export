@@ -13,7 +13,6 @@ static int line_len = 0;
 
 char *buffer_read_line(void)
 {
-    char *res;
     char *end;
     int n_read;
 

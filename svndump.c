@@ -4,13 +4,12 @@
  * svnadmin dump --incremental -r<startrev>:<endrev> <repository> >outfile
  */
 
-#include <stdint.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 
 #include "repo_tree.h"
+#include "fast_export.h"
 #include "line_buffer.h"
 
 #define NODEACT_REPLACE 4
@@ -157,7 +156,7 @@ static void handle_node(void)
     }
 
     if (node_ctx.mark) {
-        repo_copy_blob(node_ctx.type, node_ctx.mark, node_ctx.textLength);
+        fast_export_blob(node_ctx.type, node_ctx.mark, node_ctx.textLength);
     } else if (node_ctx.textLength != LENGTH_UNKNOWN) {
         buffer_skip_bytes(node_ctx.textLength);
     }
@@ -177,7 +176,7 @@ static void svndump_read(char * url)
     uint32_t len;
 
     reset_dump_ctx(url);
-    while (t = buffer_read_line()) {
+    while ((t = buffer_read_line())) {
         val = strstr(t, ": ");
         if (!val) continue;
         *val++ = '\0';

@@ -1,6 +1,9 @@
 #ifndef STRING_POOL_H_
 #define	STRING_POOL_H_
 
+#include <stdint.h>
+#include <stdio.h>
+
 uint32_t pool_intern(char *key);
 
 uint32_t pool_tok_r(char *str, const char *delim, char **saveptr);

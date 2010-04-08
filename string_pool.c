@@ -1,11 +1,5 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <string.h>
 
-#define NDEBUG
-#include <assert.h>
 #include "trp.h"
 #include "obj_pool.h"
 #include "string_pool.h"

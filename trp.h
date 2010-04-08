@@ -4,12 +4,6 @@
  *
  * Usage:
  *
- *   (Optional, see assert(3).)
- *   #define NDEBUG
- *
- *   (Required.)
- *   #include <stdint.h> (For uint32_t.)
- *   #include <assert.h>
  *   #include <trp.h>
  *   trp(...)
  *   trp_gen(...)
@@ -19,6 +13,8 @@
 
 #ifndef TRP_H_
 #define	TRP_H_
+
+#include <stdint.h>
 
 /* Node structure. */
 #define	trp_node(a_type)						\
@@ -190,7 +186,6 @@ a_pre##insert_recurse(a_type *cur_node, a_type *ins_node) {		\
     } else {								\
 	a_type *ret;							\
 	int cmp = a_cmp(ins_node, cur_node);				\
-	assert(cmp != 0);						\
 	if (cmp < 0) {							\
 	    a_type *left = a_pre##insert_recurse(trp_left_get(a_base,	\
               a_type, a_field, cur_node), ins_node);			\
