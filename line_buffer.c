@@ -8,13 +8,13 @@
 #define COPY_BUFFER_LEN 4096
 
 static char line_buffer[LINE_BUFFER_LEN];
-static int line_buffer_len = 0;
-static int line_len = 0;
+static uint32_t line_buffer_len = 0;
+static uint32_t line_len = 0;
 
 char *buffer_read_line(void)
 {
     char *end;
-    int n_read;
+    uint32_t n_read;
 
     if (line_len) {
         memmove(line_buffer, &line_buffer[line_len],
@@ -51,10 +51,10 @@ char *buffer_read_line(void)
     return line_buffer;
 }
 
-char *buffer_read_string(int len)
+char *buffer_read_string(uint32_t len)
 {
     char *s = malloc(len + 1);
-    int offset = 0;
+    uint32_t offset = 0;
     if (line_buffer_len > line_len) {
         offset = line_buffer_len - line_len;
         if (offset > len)
@@ -70,9 +70,9 @@ char *buffer_read_string(int len)
 }
 
 static char byte_buffer[COPY_BUFFER_LEN];
-void buffer_copy_bytes(int len)
+void buffer_copy_bytes(uint32_t len)
 {
-    int in, out;
+    uint32_t in, out;
     if (line_buffer_len > line_len) {
         in = line_buffer_len - line_len;
         if (in > len)
@@ -96,9 +96,9 @@ void buffer_copy_bytes(int len)
     }
 }
 
-void buffer_skip_bytes(int len)
+void buffer_skip_bytes(uint32_t len)
 {
-    int in;
+    uint32_t in;
     if (line_buffer_len > line_len) {
         in = line_buffer_len - line_len;
         if (in > len)
