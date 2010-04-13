@@ -1,104 +1,133 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
-	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
-<head>
-	<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 
-	<title>barrbrain/svn-dump-fast-export @ GitHub</title>
-	
-	<style type="text/css">
-		body {
-  		margin-top: 1.0em;
-  		background-color: #cbe0fb;
-		  font-family: "Helvetica,Arial,FreeSans";
-  		color: #000000;
+  <head>
+    <meta http-equiv="Content-Type"
+    content="text/html; charset=utf-8" />
+    <title>barrbrain/svn-dump-fast-export @ GitHub</title>
+    <style type="text/css">
+    /*<![CDATA[*/
+    body {
+      margin-top: 1.0em;
+      background-color: #cbe0fb;
+      font-family: "Helvetica,Arial,FreeSans";
+      color: #000000;
     }
     #container {
       margin: 0 auto;
       width: 700px;
     }
-		h1 { font-size: 3.8em; color: #341f04; margin-bottom: 3px; }
-		h1 .small { font-size: 0.4em; }
-		h1 a { text-decoration: none }
-		h2 { font-size: 1.5em; color: #341f04; }
+    h1 { font-size: 3.8em; color: #341f04; margin-bottom: 3px; }
+    h1 .small { font-size: 0.4em; }
+    h1 a { text-decoration: none }
+    h2 { font-size: 1.5em; color: #341f04; }
     h3 { text-align: center; color: #341f04; }
     a { color: #341f04; }
     .description { font-size: 1.2em; margin-bottom: 30px; margin-top: 30px; font-style: italic;}
     .download { float: right; }
-		pre { background: #000; color: #fff; padding: 15px;}
+    pre { background: #000; color: #fff; padding: 15px;}
     hr { border: 0; width: 80%; border-bottom: 1px solid #aaa}
     .footer { text-align:center; padding-top:30px; font-style: italic; }
-	</style>
-	
-</head>
+    a img { border: 0; }
+    img.rightribbon { position: absolute; top: 0; right: 0; }
+    /*]]>*/
+    </style>
+  </head>
 
-<body>
-  <a href="http://github.com/barrbrain/svn-dump-fast-export"><img style="position: absolute; top: 0; right: 0; border: 0;" src="http://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub" /></a>
+  <body>
+    <div>
+      <a href="http://github.com/barrbrain/svn-dump-fast-export">
+        <img class="rightribbon"
+        src="http://s3.amazonaws.com/github/ribbons/forkme_right_red_aa0000.png"
+        alt="Fork me on GitHub" />
+      </a>
+    </div>
 
-  <div id="container">
+    <div id="container">
+      <div class="download">
+        <a href="http://github.com/barrbrain/svn-dump-fast-export/zipball/master">
+          <img width="90"
+          src="http://github.com/images/modules/download/zip.png"
+          alt="zip" />
+        </a>
+        <a href="http://github.com/barrbrain/svn-dump-fast-export/tarball/master">
+          <img width="90"
+          src="http://github.com/images/modules/download/tar.png"
+          alt="tar" />
+        </a>
+      </div>
 
-    <div class="download">
+      <h1>
+        <a href="http://github.com/barrbrain/svn-dump-fast-export">
+          <span>svn-dump-fast-export</span>
+        </a>
+        <span class="small">
+        by <a href="http://github.com/barrbrain">David M. Barr</a>
+        </span>
+      </h1>
+
+      <div class="description">Export a Subversion dump into a Git
+      repository via git-fast-import</div>
+
+      <p>This project is now largely functionally complete. There
+      is still quite a bit of testing and code cleanup to be done
+      before the first major release.</p>
+
+      <h2>Dependencies</h2>
+      <p>Self-contained, bring your C89 compiler.</p>
+
+      <h2>Install</h2>
+      <pre>make
+svnadmin dump repo.svn | ./svn-dump-fast-export | git fast-import</pre>
+
+      <h2>License</h2>
+      <p>This project is distributed under a two-clause BSD style
+      license. It contains a derivative of 
+      <a href="http://www.canonware.com/trp">Jason Evans'
+      hash-based treap implementation</a>. It also contains a
+      derivative of svndump-0.92, a parser in Java by Stefan Hegny
+      and others. This was a component of 
+      <a href="http://svn2cc.sarovar.org">SvnToCCase</a>. The rest
+      of the project is presently copyright David Barr.</p>
+
+      <h2>Authors</h2>
+      <p>David Barr (david.barr@cordelta.com) 
+      <br />Jason Evans (jasone@canonware.com) 
+      <br />Stefan Hegny (stefan@hegny.de)</p>
+
+      <h2>Contact</h2>
+      <p>David Barr (david.barr@cordelta.com)</p>
+
+      <h2>Download</h2>
+      <p>You can download this project in either 
       <a href="http://github.com/barrbrain/svn-dump-fast-export/zipball/master">
-        <img border="0" width="90" src="http://github.com/images/modules/download/zip.png"></a>
+      zip</a> or 
       <a href="http://github.com/barrbrain/svn-dump-fast-export/tarball/master">
-        <img border="0" width="90" src="http://github.com/images/modules/download/tar.png"></a>
-    </div>
-
-    <h1><a href="http://github.com/barrbrain/svn-dump-fast-export">svn-dump-fast-export</a>
-      <span class="small">by <a href="http://github.com/barrbrain">barrbrain</a></span></h1>
-
-    <div class="description">
-      Export a Subversion dump into a Git repository via git-fast-import
-    </div>
-
-    <p>h1. A tool to convert a subversion dump for input to git-fast-import
-
-This project is now largely functionally complete. There is still quite a bit of testing and code cleanup to be done before the first major release.
-
-h1. License
-
-This project is distributed under a two-clause BSD style license.
-It contains a derivative of "Jason Evans' hash-based treap implementation":http://www.canonware.com/trp.
-It also contains a derivative of svndump-0.92, a parser in Java by Stefan Hegny and others. This was a component of "SvnToCCase":http://svn2cc.sarovar.org. 
-The rest of the project is presently copyright David Barr.</p><h2>Dependencies</h2>
-<p>Self-contained, bring your C89 compiler.</p>
-<h2>Install</h2>
-<p>make
-svnadmin dump repo.svn | ./svn-dump-fast-export | git fast-import</p>
-<h2>License</h2>
-<p>Two-clause BSD</p>
-<h2>Authors</h2>
-<p>David Barr (david.barr@cordelta.com)<br/>Jason Evans (jasone@canonware.com)<br/>Stefan Hegny (stefan@hegny.de)<br/><br/>      </p>
-<h2>Contact</h2>
-<p>David Barr (david.barr@cordelta.com)<br/>      </p>
-
-
-    <h2>Download</h2>
-    <p>
-      You can download this project in either
-      <a href="http://github.com/barrbrain/svn-dump-fast-export/zipball/master">zip</a> or
-      <a href="http://github.com/barrbrain/svn-dump-fast-export/tarball/master">tar</a> formats.
-    </p>
-    <p>You can also clone the project with <a href="http://git-scm.com">Git</a>
-      by running:
+      tar</a> formats.</p>
+      <p>You can also clone the project with 
+      <a href="http://git-scm.com">Git</a> by running:</p>
       <pre>$ git clone git://github.com/barrbrain/svn-dump-fast-export</pre>
-    </p>
 
-    <div class="footer">
-      get the source code on GitHub : <a href="http://github.com/barrbrain/svn-dump-fast-export">barrbrain/svn-dump-fast-export</a>
+      <div class="footer">get the source code on GitHub : 
+      <a href="http://github.com/barrbrain/svn-dump-fast-export">
+      barrbrain/svn-dump-fast-export</a></div>
+
     </div>
 
-  </div>
-
-  <script type="text/javascript">
-var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
-document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
-</script>
-<script type="text/javascript">
-try {
-var pageTracker = _gat._getTracker("UA-15820003-1");
-pageTracker._trackPageview();
-} catch(err) {}</script>
-</body>
+    <script type="text/javascript">
+    //<![CDATA[
+    var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+    document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+    //]]>
+    </script>
+    <script type="text/javascript">
+    //<![CDATA[
+    try {
+    var pageTracker = _gat._getTracker("UA-15820003-1");
+    pageTracker._trackPageview();
+    } catch(err) {}
+    //]]>
+    </script>
+  </body>
 </html>
