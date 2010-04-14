@@ -10,7 +10,7 @@ mkdir -p $HASH_DIR/{0,1,2,3,4,5,6,7,8,9,a,b,c,d,e,f}{0,1,2,3,4,5,6,7,8,9,a,b,c,d
 for (( REV=1 ; REV<=MAX_REV ; ++REV )) do
   svk up -r$REV $CO_DIR
   # Hashify working copy
-  find $CO_DIR -type d -cmin -5 -prune -o \
+  find $CO_DIR -type d -amin +5 -prune -o \
     -type f -links 1 -exec shasum '{}' + | (
     while read HASH FILE ; do
       [ -x "$FILE" ] && HASH="$HASH"x
