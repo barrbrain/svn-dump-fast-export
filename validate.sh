@@ -11,7 +11,8 @@ mkdir -p $HASH_DIR
 for (( REV=1 ; REV<=MAX_REV ; ++REV )) do
   svk up -r$REV $CO_DIR
   # Hashify working copy
-  find $CO_DIR -type f -links 1 -exec shasum '{}' + | (
+  find $CO_DIR -type d -cmin -5 -prune -o \
+    -type f -links 1 -exec shasum '{}' + | (
     while read HASH FILE ; do
       [ -x "$FILE" ] && HASH="$HASH"x
       ln "$FILE" $HASH_DIR/$HASH 2>/dev/null || \
