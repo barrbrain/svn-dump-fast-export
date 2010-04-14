@@ -5,7 +5,6 @@ CO_DIR=validation
 HASH_DIR=hashes
 MAX_REV=23000
 
-mkdir $CO_DIR
 svk co -r1 /$SVK_DEPOT/ $CO_DIR
 mkdir -p $HASH_DIR
 for (( REV=1 ; REV<=MAX_REV ; ++REV )) do
@@ -23,9 +22,9 @@ done
 
 ( cd $CO_DIR
   git init
-  svk admin dump -q /$SVK_DEPOT/ | \
+  svk admin dump /$SVK_DEPOT/ | \
     ./svn-dump-fast-export "$URL" | \
-    git fast-import
+    git fast-import --force
   git rev-list master | (
     while read HASH ; do
       REV=`git log -1 --pretty=format:%b $HASH | \
