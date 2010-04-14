@@ -6,7 +6,7 @@ HASH_DIR=hashes
 MAX_REV=23000
 
 svk co -r1 /$SVK_DEPOT/ $CO_DIR
-mkdir -p $HASH_DIR
+mkdir -p $HASH_DIR/{0,1,2,3,4,5,6,7,8,9,a,b,c,d,e,f}{0,1,2,3,4,5,6,7,8,9,a,b,c,d,e,f}
 for (( REV=1 ; REV<=MAX_REV ; ++REV )) do
   svk up -r$REV $CO_DIR
   # Hashify working copy
@@ -14,8 +14,9 @@ for (( REV=1 ; REV<=MAX_REV ; ++REV )) do
     -type f -links 1 -exec shasum '{}' + | (
     while read HASH FILE ; do
       [ -x "$FILE" ] && HASH="$HASH"x
-      ln "$FILE" $HASH_DIR/$HASH 2>/dev/null || \
-        ln -f $HASH_DIR/$HASH "$FILE"
+      HASH_FILE="$HASH_DIR/${HASH:0:2}/$HASH"
+      ln "$FILE" "$HASH_FILE" 2>/dev/null || \
+        ln -f "$HASH_FILE" "$FILE"
     done
   )
 done
