@@ -19,22 +19,20 @@ mkdir -p $HASH_DIR/{0,1,2,3,4,5,6,7,8,9,a,b,c,d,e,f}{0,1,2,3,4,5,6,7,8,9,a,b,c,d
 for (( REV=1 ; REV<=MAX_REV ; ++REV )) do
   svk up -r$REV $CO_DIR
   # Hashify working copy
-  ( cd $CO_DIR ; git update-index --refresh ) >/dev/null
-  ( cd $CO_DIR ; git ls-files -moz |  xargs -0 shasum ) \
-    2>/dev/null | (
-    while read HASH FILE ; do
+  ( cd $CO_DIR ; git update-index --refresh
+    git ls-files -modz | tee .git/filelist | git update-index -z --add --replace --remove --stdin
+  ) >/dev/null
+  ( cd $CO_DIR;
+    xargs -0 git ls-files -s < .git/filelist
+  ) | (
+    while read MODE HASH STAGE FILE ; do
       FILE="$CO_DIR/$FILE"
-      [ -f "$FILE" ] || continue
-      [ -x "$FILE" ] && HASH="$HASH"x
-      HASH_FILE="$HASH_DIR/${HASH:0:2}/$HASH"
+      HASH_FILE="$HASH_DIR/${HASH:0:2}/$HASH$MODE"
       ln "$FILE" "$HASH_FILE" 2>/dev/null || \
         ln -f "$HASH_FILE" "$FILE"
     done
   )
   ( cd $CO_DIR ; 
-    git update-index --refresh >/dev/null
-    git ls-files -dz | xargs -0 git update-index --remove 
-    git ls-files -moz | xargs -0 git update-index --add --replace 
     SVN_AUTHOR=`svk pg --revprop -r$REV svn:author`
     SVN_DATE=`svk pg --revprop -r$REV svn:date`
     export GIT_COMMITTER_NAME=$SVN_AUTHOR
