@@ -2,7 +2,14 @@
 SVK_DEPOT=""
 CO_DIR=validation
 HASH_DIR=hashes
-MAX_REV=23000
+
+SVN_UUID=`svk pg --revprop -r0 svn:sync-from-uuid /$SVK_DEPOT/`
+SVN_URL=`svk pg --revprop -r0 svn:sync-from-url /$SVK_DEPOT/`
+MAX_REV=`svk pg --revprop -r0 svn:sync-last-merged-rev /$SVK_DEPOT/`
+
+echo SVN_UUID: $SVN_UUID
+echo SVN_URL: $SVN_URL
+echo MAX_REV: $MAX_REV
 
 svk co -r1 /$SVK_DEPOT/ $CO_DIR
 ( cd $CO_DIR ;
@@ -31,7 +38,7 @@ for (( REV=1 ; REV<=MAX_REV ; ++REV )) do
     SVN_AUTHOR=`svk pg --revprop -r$REV svn:author`
     SVN_DATE=`svk pg --revprop -r$REV svn:date`
     export GIT_COMMITTER_NAME=$SVN_AUTHOR
-    export GIT_COMMITTER_EMAIL=$SVN_AUTHOR"@local"
+    export GIT_COMMITTER_EMAIL=$SVN_AUTHOR"@"$SVN_UUID
     export GIT_COMMITTER_DATE="`date -juf '%FT%T' $SVN_DATE '+%F %T %z' 2>/dev/null`"
     export GIT_AUTHOR_NAME="$GIT_COMMITTER_NAME"
     export GIT_AUTHOR_EMAIL="$GIT_COMMITTER_EMAIL"
