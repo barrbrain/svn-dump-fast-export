@@ -50,5 +50,6 @@ for (( REV=1 ; REV<=MAX_REV ; ++REV )) do
     GIT_COMMIT=`svk pg --revprop -r$REV svn:log | git commit-tree $GIT_TREE $GIT_PARENT`
     git update-ref HEAD $GIT_COMMIT
     git tag $REV
+    git gc --auto
   )
 done
