@@ -1,6 +1,6 @@
 #!/bin/bash
 SVK_DEPOT=""
-CO_DIR=unchanged
+CO_DIR=validation
 HASH_DIR=.git/wc
 
 SVN_UUID=`svk pg --revprop -r0 svn:sync-from-uuid /$SVK_DEPOT/`
@@ -20,21 +20,16 @@ for (( REV=1 ; REV<=MAX_REV ; ++REV )) do
   svk up -r$REV | tee .git/svklog
   # Process SVK log
   grep '^A' .git/svklog | sed 's/^....//' | tr '\n' '\0' \
-   | xargs -0 -J % find % -maxdepth 0 -not -type d -print0 > .git/svnadd
+   | xargs -0 -r -I '{}' find '{}' -maxdepth 0 -not -type d -print0 > .git/svnadd
   grep '^U' .git/svklog | sed 's/^....//' | tr '\n' '\0' > .git/svnupdate
-  grep '^D' .git/svklog | sed 's/^....//' | tr '\n' '\0' > .git/svndelete
-  # Add new files
+  grep '^D' .git/svklog | sed 's/^....//' | tr '\n' '\0' \
+   | xargs -0 -r git ls-files -z > .git/svndelete
+  # Update the index
   git update-index -z --add --replace --stdin < .git/svnadd
-  # Clear skip-worktree for updated and deleted files
-  cat .git/svn{update,delete} | xargs -0 git ls-files -z > .git/filelist
-  git update-index -z --no-skip-worktree --stdin < .git/filelist
-  # Modify index with updated and removed files
-  git update-index -z --remove --stdin < .git/filelist
-  # Set skip-worktree for added and updated files
-  cat .git/svn{add,update} > .git/filelist
-  git update-index -z --skip-worktree --stdin < .git/filelist
+  git update-index -z --stdin < .git/svnupdate
+  git update-index -z --remove --stdin < .git/svndelete
   # Hashify working copy
-  xargs -0 git ls-files -s < .git/filelist | (
+  cat .git/svn{add,update} | xargs -0 -r git ls-files -s | (
     while read MODE HASH STAGE FILE ; do
       HASH_FILE="$HASH_DIR/${HASH:0:2}/$HASH$MODE"
       ln "$FILE" "$HASH_FILE" 2>/dev/null || \
@@ -60,5 +55,6 @@ for (( REV=1 ; REV<=MAX_REV ; ++REV )) do
    | git commit-tree $GIT_TREE $GIT_PARENT`
   git update-ref HEAD $GIT_COMMIT
   git tag $REV
-  [[ "$REV" =~ "00$$" ]] && git gc --auto
+  [[ "$REV" =~ [05]00$ ]] && git gc
+  [[ "$REV" =~ 00$ ]] && find $HASH_DIR -links 1 -exec rm '{}' +
 done
