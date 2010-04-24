@@ -47,21 +47,23 @@ for (( REV=1 ; REV<=MAX_REV ; ++REV )) do
       ACTION="${LOG_LINE:0:1}"
       FILE="${LOG_LINE:4}"
       [ "$ACTION" = D ] && echo D "$FILE" || {
-        MODE=`printf %o 0x$(stat -c%f "$FILE")`
-        [[ $MODE =~ 1..... ]] || continue
-        [ $MODE = 120777 ] && MODE=120000 \
+        [ -d "$FILE" ] && continue
+        [ -h "$FILE" ] && MODE=120000 || \
+        [ -x "$FILE" ] && MODE=100755 || \
+        MODE=100644
+        [ $MODE = 120000 ] \
          && HASH=`readlink -n "$FILE" | sha1sum | cut -b1-40` \
          && LENGTH=`readlink -n "$FILE" | wc -c` \
          || HASH=`sha1sum "$FILE" | cut -b1-40` \
          && LENGTH=`wc -c < "$FILE"`
-        HASH_FILE="$HASH_DIR/${HASH:0:2}/$HASH$MODE"
-        ln -f "$HASH_FILE" "$FILE" >/dev/null 2>/dev/null \
-         || ln "$FILE" "$HASH_FILE" >/dev/null
         echo M "$MODE" inline "$FILE"
         echo data "$LENGTH"
         [ $MODE = 120000 ] && readlink -n "$FILE" \
          || cat "$FILE"
         echo
+        HASH_FILE="$HASH_DIR/${HASH:0:2}/$HASH$MODE"
+        ln -f "$HASH_FILE" "$FILE" >/dev/null 2>/dev/null \
+         || ln "$FILE" "$HASH_FILE" >/dev/null
       }
     done
   } < .git/svklog
