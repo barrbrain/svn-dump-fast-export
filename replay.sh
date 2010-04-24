@@ -55,8 +55,8 @@ for (( REV=1 ; REV<=MAX_REV ; ++REV )) do
          || HASH=`sha1sum "$FILE" | cut -b1-40` \
          && LENGTH=`wc -c < "$FILE"`
         HASH_FILE="$HASH_DIR/${HASH:0:2}/$HASH$MODE"
-        ln "$FILE" "$HASH_FILE" >/dev/null 2>/dev/null || \
-          ln -f "$HASH_FILE" "$FILE" >/dev/null
+        ln -f "$HASH_FILE" "$FILE" >/dev/null 2>/dev/null \
+         || ln "$FILE" "$HASH_FILE" >/dev/null
         echo M "$MODE" inline "$FILE"
         echo data "$LENGTH"
         [ $MODE = 120000 ] && readlink -n "$FILE" \
