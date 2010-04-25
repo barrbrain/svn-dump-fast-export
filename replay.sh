@@ -1,6 +1,6 @@
 #!/bin/bash
 SVK_DEPOT=""
-CO_DIR=unchanged
+CO_DIR=svkwc
 HASH_DIR=.git/wc
 
 SVN_UUID=`svk pg --revprop -r0 svn:sync-from-uuid /$SVK_DEPOT/`
@@ -21,7 +21,7 @@ for (( REV=1 ; REV<=MAX_REV ; ++REV )) do
   svk up -r$REV | tee .git/svklog 1>&2
   # Extract commit data from SVK
   SVN_AUTHOR=`svk pg --revprop -r$REV svn:author`
-  SVN_DATE=`svk pg --revprop -r$REV svn:date`
+  SVN_DATE=`svk pg --revprop -r$REV`
 
   echo '#' SVN_AUTHOR "$SVN_AUTHOR"
   echo '#' SVN_DATE "$SVN_DATE"
@@ -47,26 +47,32 @@ for (( REV=1 ; REV<=MAX_REV ; ++REV )) do
       ACTION="${LOG_LINE:0:1}"
       FILE="${LOG_LINE:4}"
       [ "$ACTION" = D ] && echo D "$FILE" || {
-        [ -d "$FILE" ] && continue
-        [ -h "$FILE" ] && MODE=120000 || \
-        [ -x "$FILE" ] && MODE=100755 || \
-        MODE=100644
-        [ $MODE = 120000 ] \
-         && HASH=`readlink -n "$FILE" | sha1sum | cut -b1-40` \
-         && LENGTH=`readlink -n "$FILE" | wc -c` \
-         || HASH=`sha1sum "$FILE" | cut -b1-40` \
-         && LENGTH=`wc -c < "$FILE"`
-        echo M "$MODE" inline "$FILE"
-        echo data "$LENGTH"
-        [ $MODE = 120000 ] && readlink -n "$FILE" \
-         || cat "$FILE"
-        echo
-        HASH_FILE="$HASH_DIR/${HASH:0:2}/$HASH$MODE"
-        ln -f "$HASH_FILE" "$FILE" >/dev/null 2>/dev/null \
-         || ln "$FILE" "$HASH_FILE" >/dev/null
+        [ -h "$FILE" ] \
+         && LINKFILE=.git/link/"$FILE" \
+         && mkdir -p "`dirname "$LINKFILE"`" \
+         && readlink -n "$FILE" > "$LINKFILE" \
+         && echo "$LINKFILE" >&3
+        [ -f "$FILE" ] \
+         && echo "$FILE" >&3
       }
     done
-  } < .git/svklog
+  } < .git/svklog 3>.git/modified
+  tr '\n' '\0' < .git/modified | xargs -r -0 sha1sum | \
+  {
+    while read HASH FILE ; do
+      LENGTH=`stat -c %s "$FILE"`
+      [[ "$FILE" =~ ^\.git ]] && LINK="$FILE" && FILE="${FILE:10}" \
+       && MODE=120000 || \
+       [ -x "$FILE" ] && MODE=100755 || MODE=100644
+      echo M "$MODE" inline "$FILE"
+      echo data "$LENGTH"
+      [ $MODE = 120000 ] && cat "$LINK" || cat "$FILE"
+      echo
+      HASH_FILE="$HASH_DIR/${HASH:0:2}/$HASH$MODE"
+      ln -f "$HASH_FILE" "$FILE" >/dev/null 2>/dev/null \
+       || ln "$FILE" "$HASH_FILE" >/dev/null
+    done
+  }
   echo
   [[ "$REV" =~ 00$ ]] && find $HASH_DIR -links 1 -exec rm '{}' + 1>&2
 done
