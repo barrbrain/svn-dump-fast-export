@@ -5,10 +5,11 @@ use SVN::Repos;
 use SVN::Fs;
 
 use Date::Parse;
+use File::Temp;
 
-my $depot = '/path/to/mirror';
+my $mirror = '/path/to/mirror';
 
-my $repos = SVN::Repos::open($depot);
+my $repos = SVN::Repos::open($mirror);
 my $fs = $repos->fs();
 
 my $uuid = $fs->revision_prop(0, 'svn:sync-from-uuid');
@@ -18,6 +19,10 @@ my $maxrev = int($fs->revision_prop(0, 'svn:sync-last-merged-rev'));
 print "# SVN_UUID: $uuid\n";
 print "# SVN_URL: $url\n";
 print "# MAX_REV: $maxrev\n";
+
+my $commitlog;
+my $nextmark = 1;
+my $marks;
 
 $repos->get_logs([''], 1, $maxrev, 1, 0, sub {
   my ($paths, $rev, $author, $date, $log, $pool) = @_;
@@ -29,49 +34,79 @@ $repos->get_logs([''], 1, $maxrev, 1, 0, sub {
   my $GIT_COMMITTER_EMAIL=$author.'@'.$uuid;
   my $GIT_COMMITTER_DATE=int(str2time($date)).' +0000';
 
-  print "commit refs/heads/master\n";
-  print "committer $GIT_COMMITTER_NAME <$GIT_COMMITTER_EMAIL> $GIT_COMMITTER_DATE\n";
-  print 'data '.length($log)."\n";
-  print $log;
-  print "\n";
+  my @commitlogfile = File::Temp->new();
+  $commitlog = $commitlogfile[FH];
+  
+  print $commitlog "commit refs/heads/master\n";
+  print $commitlog "committer $GIT_COMMITTER_NAME <$GIT_COMMITTER_EMAIL> $GIT_COMMITTER_DATE\n";
+  print $commitlog 'data '.length($log)."\n$log\n";
 
-  my $root = $fs->revision_root($rev);
+  my $root = $fs->revision_root($rev, $pool);
 
   for my $file (keys %$paths) {
-    my $action = $paths->{$file}->action;
-    my $mode, $content, $length;
+    my $node = $paths->{$file};
+    my $action = $node->action;
 
     if ($action eq 'D') {
-      print "D $file\n";
+      print $commitlog "D $file\n";
       next;
     }
 
-    if ($root->is_dir($file)) {
-      next;
-    }
-
-    my $proplist = $root->node_proplist($file);
-
-    if (defined $proplist->{'svn:special'}) {
-      $mode = '120000';
-      $length = $root->file_length($file) - 5;
-      my $contents = $root->file_contents($file);
-      $contents->READ($content, 5);
-      $contents->READ($content, $length);
+    if ($root->is_dir($file, $pool) ) {
+      # Recursive modify
+      if (defined $node->copyfrom_rev) {
+#        modifydir($root, $file);
+      }
     } else {
-      $mode = defined $proplist->{'svn:executable'} ? '100755' : '100644';
-      $length = $root->file_length($file);
-      my $contents = $root->file_contents($file);
-      $contents->READ($content, $length);
+      modifyfile($root, $file, $pool);
     }
+  }
 
-    my $path = substr($file, 1);
-
-    print "M $mode inline $path\n";
-    print "data ".$length."\n";
-    print $content;
-    print "\n";
-  } 
+  seek $commitlog, 0, 0;
+  local $/ = \16384;
+  while (<$commitlog>) {
+    print $_;
+  }
+  close $commitlog;
 
   print "progress to revision $rev\n"
 });
+
+sub modifyfile {
+  my ($root, $file, $pool) = @_;
+
+  my $proplist = $root->node_proplist($file, $pool);
+  my $md5 = $root->file_md5_checksum($file, $pool);
+  # Strip the leading slash from the path for git
+  my $path = substr($file, 1);
+
+  my $mode;
+
+  if (defined $proplist->{'svn:special'}) {
+    $mode = '120000';
+    $md5 .= 'L';
+  } else {
+    $mode = defined $proplist->{'svn:executable'} ? '100755' : '100644';
+  }
+
+  my $mark = $marks->{$md5};
+  if (!defined $mark) {
+    $mark = $nextmark++;
+    $marks->{$md5} = $mark;
+    my $length = $root->file_length($file, $pool);
+    $length -= 5 if $mode == '120000';
+    my $contents = $root->file_contents($file, $pool);
+    print "# MD5: $md5\n";
+    print "blob\nmark :$mark\n";
+    print "data $length\n";
+    local $/ = \16384;
+    my $linkprefix;
+    read $contents, $linkprefix, 5 if $mode == '120000';
+    while (<$contents>) {
+      print $_;
+    }
+    close $contents;
+    print "\n";
+  }
+  print $commitlog "M $mode :$mark $path\n";
+} 
