@@ -4,9 +4,11 @@
  * svnadmin dump --incremental -r<startrev>:<endrev> <repository> >outfile
  */
 
+#define _GNU_SOURCE
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include "repo_tree.h"
 #include "fast_export.h"
