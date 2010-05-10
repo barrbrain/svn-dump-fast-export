@@ -9,7 +9,7 @@ svk co -r1 /$SVK_DEPOT/ $CO_DIR
 ( cd $CO_DIR ;
   git init
   svk admin dump /$SVK_DEPOT/ | \
-    ../svn-dump-fast-export | \
+    ../svn-fe | \
     git fast-import --force --export-marks=../marks.txt
 )
 mkdir -p $HASH_DIR/{0,1,2,3,4,5,6,7,8,9,a,b,c,d,e,f}{0,1,2,3,4,5,6,7,8,9,a,b,c,d,e,f}
