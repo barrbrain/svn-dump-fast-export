@@ -139,7 +139,7 @@ static void handle_node(void)
         if (node_ctx.propLength != LENGTH_UNKNOWN &&
             node_ctx.textLength != LENGTH_UNKNOWN) {
             repo_modify(node_ctx.dst, node_ctx.type, node_ctx.mark);
-        } else if (node_ctx.textLength >= 0) {
+        } else if (node_ctx.textLength != LENGTH_UNKNOWN) {
             node_ctx.srcMode = repo_replace(node_ctx.dst, node_ctx.mark);
         }
     } else if (node_ctx.action == NODEACT_ADD) {
