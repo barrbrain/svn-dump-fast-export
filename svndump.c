@@ -49,9 +49,13 @@ static void reset_node_ctx(char * fname)
     node_ctx.action = NODEACT_UNKNOWN;
     node_ctx.propLength = LENGTH_UNKNOWN;
     node_ctx.textLength = LENGTH_UNKNOWN;
+    if (node_ctx.src)
+        free(node_ctx.src);
     node_ctx.src = NULL;
     node_ctx.srcRev = 0;
     node_ctx.srcMode = 0;
+    if (node_ctx.dst)
+        free(node_ctx.dst);
     node_ctx.dst = strdup(fname);
     node_ctx.mark = 0;
 }
@@ -60,9 +64,15 @@ static void reset_rev_ctx(uint32_t revision)
 {
     rev_ctx.revision = revision;
     rev_ctx.timestamp = 0;
-    rev_ctx.descr = "";
-    rev_ctx.author = "nobody";
-    rev_ctx.date = "now";
+    if (rev_ctx.descr)
+        free(rev_ctx.descr);
+    rev_ctx.descr = NULL;
+    if (rev_ctx.author)
+        free(rev_ctx.author);
+    rev_ctx.author = NULL;
+    if (rev_ctx.date)
+        free(rev_ctx.date);
+    rev_ctx.date = NULL;
 }
 
 static void reset_dump_ctx(char * url) {
@@ -80,8 +90,8 @@ static void read_props(void)
 {
     struct tm tm;
     uint32_t len;
-    char *key = "";
-    char *val = "";
+    char *key = NULL;
+    char *val = NULL;
     char *t;
     while ((t = buffer_read_line()) && strcmp(t, "PROPS-END")) {
         if (!strncmp(t, "K ", 2)) {
@@ -92,10 +102,16 @@ static void read_props(void)
             len = atoi(&t[2]);
             val = buffer_read_string(len);
             if (!strcmp(key, "svn:log")) {
+                if (rev_ctx.descr)
+                    free(rev_ctx.descr);
                 rev_ctx.descr = val;
             } else if (!strcmp(key, "svn:author")) {
+                if (rev_ctx.author)
+                    free(rev_ctx.author);
                 rev_ctx.author = val;
             } else if (!strcmp(key, "svn:date")) {
+                if (rev_ctx.date)
+                    free(rev_ctx.date);
                 rev_ctx.date = val;
                 strptime(rev_ctx.date, "%FT%T", &tm);
                 timezone = 0;
@@ -105,12 +121,18 @@ static void read_props(void)
                 if (node_ctx.type == REPO_MODE_BLB) {
                     node_ctx.type = REPO_MODE_EXE;
                 }
+                free(val);
             } else if (!strcmp(key, "svn:special")) {
                 if (node_ctx.type == REPO_MODE_BLB) {
                     node_ctx.type = REPO_MODE_LNK;
                 }
+                free(val);
+            } else {
+                free(val);
             }
-            key = "";
+            if (key)
+                free(key);
+            key = NULL;
             buffer_read_line();
         }
     }
@@ -215,6 +237,8 @@ static void svndump_read(char * url)
                 node_ctx.action = NODEACT_UNKNOWN;
             }
         } else if (!strcmp(t, "Node-copyfrom-path")) {
+            if (node_ctx.src)
+                free(node_ctx.src);
             node_ctx.src = strdup(val);
         } else if (!strcmp(t, "Node-copyfrom-rev")) {
             node_ctx.srcRev = atoi(val);
