@@ -56,7 +56,7 @@ static void reset_node_ctx(char * fname)
     node_ctx.srcMode = 0;
     if (node_ctx.dst)
         free(node_ctx.dst);
-    node_ctx.dst = strdup(fname);
+    node_ctx.dst = fname;
     node_ctx.mark = 0;
 }
 
@@ -75,8 +75,13 @@ static void reset_rev_ctx(uint32_t revision)
     rev_ctx.date = NULL;
 }
 
-static void reset_dump_ctx(char * url) {
+static void reset_dump_ctx(char *url)
+{
+    if (dump_ctx.url)
+        free(dump_ctx.url);
     dump_ctx.url = url;
+    if (dump_ctx.uuid)
+        free(dump_ctx.uuid);
     dump_ctx.uuid = NULL;
 }
 
@@ -214,7 +219,7 @@ static void svndump_read(char * url)
             reset_rev_ctx(atoi(val));
         } else if (!strcmp(t, "Node-path")) {
             active_ctx = NODE_CTX;
-            reset_node_ctx(val);
+            reset_node_ctx(strdup(val));
         } else if (!strcmp(t, "Node-kind")) {
             if (!strcmp(val, "dir")) {
                 node_ctx.type = REPO_MODE_DIR;
@@ -263,9 +268,17 @@ static void svndump_read(char * url)
     if (active_ctx != DUMP_CTX) handle_revision();
 }
 
+static void svndump_reset(void)
+{
+    repo_reset();
+    reset_dump_ctx(NULL);
+    reset_rev_ctx(0);
+    reset_node_ctx(NULL);
+}
+
 int main(int argc, char **argv)
 {
     svndump_read((argc > 1) ? argv[1] : NULL);
-    repo_reset();
+    svndump_reset();
     return 0;
 }
