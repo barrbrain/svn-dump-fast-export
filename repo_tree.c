@@ -322,3 +322,11 @@ void repo_commit(uint32_t revision, char * author, char * log, char * uuid,
     commit_pointer(active_commit)->root_dir_offset =
         commit_pointer(active_commit - 1)->root_dir_offset;
 }
+
+void repo_reset(void)
+{
+    pool_reset();
+    commit_reset();
+    dir_reset();
+    dirent_reset();
+}

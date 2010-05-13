@@ -77,3 +77,8 @@ void pool_print_seq(uint32_t len, uint32_t * seq, char delim, FILE * stream)
     }
 }
 
+void pool_reset(void)
+{
+    node_reset();
+    string_reset();
+}

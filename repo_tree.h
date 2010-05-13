@@ -25,4 +25,7 @@ void repo_commit(uint32_t revision, char * author, char * log, char * uuid,
                  char * url, time_t timestamp);
 
 void repo_diff(uint32_t r1, uint32_t r2);
+
+void repo_reset(void);
+
 #endif

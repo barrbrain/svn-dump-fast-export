@@ -266,5 +266,6 @@ static void svndump_read(char * url)
 int main(int argc, char **argv)
 {
     svndump_read((argc > 1) ? argv[1] : NULL);
+    repo_reset();
     return 0;
 }
