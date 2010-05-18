@@ -27,15 +27,19 @@ static char gitsvnline[MAX_GITSVN_LINE_LEN];
 void fast_export_commit(uint32_t revision, char * author, char * log,
                         char * uuid, char * url, time_t timestamp)
 {
-    printf("commit refs/heads/master\nmark :%d\n", revision);
-    printf("committer %s <%s@%s> %ld +0000\n",
-         author, author, uuid ? uuid : "local", timestamp);
+    if (!author)
+        author = "nobody";
+    if (!log)
+        log = "";
     if (uuid && url) {
         snprintf(gitsvnline, MAX_GITSVN_LINE_LEN, "\n\ngit-svn-id: %s@%d %s\n",
              url, revision, uuid);
     } else {
         *gitsvnline = '\0';
     }
+    printf("commit refs/heads/master\nmark :%d\n", revision);
+    printf("committer %s <%s@%s> %ld +0000\n",
+         author, author, uuid ? uuid : "local", timestamp);
     printf("data %ld\n%s%s\n",
            strlen(log) + strlen(gitsvnline), log, gitsvnline);
     repo_diff(revision - 1, revision);
