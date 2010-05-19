@@ -7,7 +7,7 @@
 
 #define MAX_GITSVN_LINE_LEN 4096
 
-void fast_export_delete(uint32_t depth, uint32_t * path)
+void fast_export_delete(uint32_t depth, uint32_t *path)
 {
     putchar('D');
     putchar(' ');
@@ -15,7 +15,7 @@ void fast_export_delete(uint32_t depth, uint32_t * path)
     putchar('\n');
 }
 
-void fast_export_modify(uint32_t depth, uint32_t * path, uint32_t mode,
+void fast_export_modify(uint32_t depth, uint32_t *path, uint32_t mode,
                         uint32_t mark)
 {
     printf("M %06o :%d ", mode, mark);
@@ -24,8 +24,8 @@ void fast_export_modify(uint32_t depth, uint32_t * path, uint32_t mode,
 }
 
 static char gitsvnline[MAX_GITSVN_LINE_LEN];
-void fast_export_commit(uint32_t revision, char * author, char * log,
-                        char * uuid, char * url, time_t timestamp)
+void fast_export_commit(uint32_t revision, char *author, char *log,
+                        char *uuid, char *url, time_t timestamp)
 {
     if (!author)
         author = "nobody";

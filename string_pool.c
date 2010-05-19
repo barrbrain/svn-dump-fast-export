@@ -5,36 +5,36 @@
 #include "string_pool.h"
 
 typedef struct node_s node_t;
+typedef trp(node_t) tree_t;
+static tree_t tree = { ~0 };
 
 struct node_s {
     uint32_t offset;
-     trp_node(node_t) children;
+    trp_node(node_t) children;
 };
 
-typedef trp(node_t) tree_t;
-
-static tree_t tree = { ~0 };
-
+/* Create two memory pools: one for node_t, and another for strings */
 obj_pool_gen(node, node_t, 4096);
 obj_pool_gen(string, char, 4096);
 
-static char *node_value(node_t * node)
+static char *node_value(node_t *node)
 {
     return node ? string_pointer(node->offset) : NULL;
 }
 
-static int node_value_cmp(node_t * a, node_t * b)
+static int node_value_cmp(node_t *a, node_t *b)
 {
     return strcmp(node_value(a), node_value(b));
 }
 
-static int node_indentity_cmp(node_t * a, node_t * b)
+static int node_indentity_cmp(node_t *a, node_t *b)
 {
     int r = node_value_cmp(a, b);
     return r ? r : (((uintptr_t) a) > ((uintptr_t) b))
         - (((uintptr_t) a) < ((uintptr_t) b));
 }
 
+/* Build a Treap from the node_s structure (a trp_node w/ offset) */
 trp_gen(static, tree_, tree_t, node_t, children, node,
         node_indentity_cmp);
 
@@ -67,7 +67,7 @@ uint32_t pool_tok_r(char *str, const char *delim, char **saveptr)
     return token ? pool_intern(token) : ~0;
 }
 
-void pool_print_seq(uint32_t len, uint32_t * seq, char delim, FILE * stream)
+void pool_print_seq(uint32_t len, uint32_t *seq, char delim, FILE *stream)
 {
     uint32_t i;
     for (i = 0; i < len; i++) {

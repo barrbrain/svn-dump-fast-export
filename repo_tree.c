@@ -27,6 +27,7 @@ struct repo_commit_s {
     uint32_t root_dir_offset;
 };
 
+/* Generate memory pools for commit, dir and dirent */
 obj_pool_gen(commit, repo_commit_t, 4096);
 obj_pool_gen(dir, repo_dir_t, 4096);
 obj_pool_gen(dirent, repo_dirent_t, 4096);
@@ -35,12 +36,12 @@ static uint32_t num_dirs_saved = 0;
 static uint32_t num_dirents_saved = 0;
 static uint32_t active_commit = -1;
 
-static repo_dir_t *repo_commit_root_dir(repo_commit_t * commit)
+static repo_dir_t *repo_commit_root_dir(repo_commit_t *commit)
 {
     return dir_pointer(commit->root_dir_offset);
 }
 
-static repo_dirent_t *repo_first_dirent(repo_dir_t * dir)
+static repo_dirent_t *repo_first_dirent(repo_dir_t *dir)
 {
     return dirent_pointer(dir->first_offset);
 }
@@ -53,7 +54,7 @@ static int repo_dirent_name_cmp(const void *a, const void *b)
          < ((repo_dirent_t *) b)->name_offset);
 }
 
-static repo_dirent_t *repo_dirent_by_name(repo_dir_t * dir,
+static repo_dirent_t *repo_dirent_by_name(repo_dir_t *dir,
                                           uint32_t name_offset)
 {
     repo_dirent_t key;
@@ -64,12 +65,12 @@ static repo_dirent_t *repo_dirent_by_name(repo_dir_t * dir,
                    sizeof(repo_dirent_t), repo_dirent_name_cmp);
 }
 
-static int repo_dirent_is_dir(repo_dirent_t * dirent)
+static int repo_dirent_is_dir(repo_dirent_t *dirent)
 {
     return dirent != NULL && dirent->mode == REPO_MODE_DIR;
 }
 
-static repo_dir_t *repo_dir_from_dirent(repo_dirent_t * dirent)
+static repo_dir_t *repo_dir_from_dirent(repo_dirent_t *dirent)
 {
     if (!repo_dirent_is_dir(dirent))
         return NULL;
@@ -84,7 +85,7 @@ static uint32_t dir_with_dirents_alloc(uint32_t size)
     return offset;
 }
 
-static repo_dir_t *repo_clone_dir(repo_dir_t * orig_dir, uint32_t padding)
+static repo_dir_t *repo_clone_dir(repo_dir_t *orig_dir, uint32_t padding)
 {
     uint32_t orig_o, new_o, dirent_o;
     orig_o = dir_offset(orig_dir);
@@ -228,10 +229,10 @@ void repo_delete(char *path)
 }
 
 static void
-repo_git_add_r(uint32_t depth, uint32_t * path, repo_dir_t * dir);
+repo_git_add_r(uint32_t depth, uint32_t *path, repo_dir_t *dir);
 
 static void
-repo_git_add(uint32_t depth, uint32_t * path, repo_dirent_t * dirent)
+repo_git_add(uint32_t depth, uint32_t *path, repo_dirent_t *dirent)
 {
     if (repo_dirent_is_dir(dirent)) {
         repo_git_add_r(depth, path, repo_dir_from_dirent(dirent));
@@ -241,7 +242,7 @@ repo_git_add(uint32_t depth, uint32_t * path, repo_dirent_t * dirent)
 }
 
 static void
-repo_git_add_r(uint32_t depth, uint32_t * path, repo_dir_t * dir)
+repo_git_add_r(uint32_t depth, uint32_t *path, repo_dir_t *dir)
 {
     uint32_t o;
     repo_dirent_t *de;
@@ -253,8 +254,8 @@ repo_git_add_r(uint32_t depth, uint32_t * path, repo_dir_t * dir)
 }
 
 static void
-repo_diff_r(uint32_t depth, uint32_t * path, repo_dir_t * dir1,
-            repo_dir_t * dir2)
+repo_diff_r(uint32_t depth, uint32_t *path, repo_dir_t *dir1,
+            repo_dir_t *dir2)
 {
     repo_dirent_t *de1, *de2, *max_de1, *max_de2;
     de1 = repo_first_dirent(dir1);
@@ -306,8 +307,8 @@ void repo_diff(uint32_t r1, uint32_t r2)
                 repo_commit_root_dir(commit_pointer(r2)));
 }
 
-void repo_commit(uint32_t revision, char * author, char * log, char * uuid,
-                 char * url, time_t timestamp)
+void repo_commit(uint32_t revision, char *author, char *log, char *uuid,
+                 char *url, time_t timestamp)
 {
     if (revision == 0) {
         active_commit = commit_alloc(1);

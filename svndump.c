@@ -43,7 +43,7 @@ static struct {
     char *uuid, *url;
 } dump_ctx;
 
-static void reset_node_ctx(char * fname)
+static void reset_node_ctx(char *fname)
 {
     node_ctx.type = 0;
     node_ctx.action = NODEACT_UNKNOWN;
@@ -197,7 +197,7 @@ static void handle_revision(void)
                 dump_ctx.url, rev_ctx.timestamp);
 }
 
-static void svndump_read(char * url)
+static void svndump_read(char *url)
 {
     char *val;
     char *t;

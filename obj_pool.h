@@ -41,7 +41,7 @@ static void pre##_free(uint32_t count)                                     \
 {                                                                          \
     pre##_pool.size -= count;                                              \
 }                                                                          \
-static uint32_t pre##_offset(obj_t * obj)                                  \
+static uint32_t pre##_offset(obj_t *obj)                                   \
 {                                                                          \
     return obj == NULL ? ~0 : obj - pre##_pool.base;                       \
 }                                                                          \

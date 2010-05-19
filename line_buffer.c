@@ -8,6 +8,7 @@
 #define COPY_BUFFER_LEN 4096
 
 static char line_buffer[LINE_BUFFER_LEN];
+static char byte_buffer[COPY_BUFFER_LEN];
 static uint32_t line_buffer_len = 0;
 static uint32_t line_len = 0;
 
@@ -69,7 +70,6 @@ char *buffer_read_string(uint32_t len)
     return s;
 }
 
-static char byte_buffer[COPY_BUFFER_LEN];
 void buffer_copy_bytes(uint32_t len)
 {
     uint32_t in, out;
