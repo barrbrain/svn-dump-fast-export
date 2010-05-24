@@ -40,7 +40,7 @@ void fast_export_commit(uint32_t revision, char *author, char *log,
     printf("commit refs/heads/master\nmark :%d\n", revision);
     printf("committer %s <%s@%s> %ld +0000\n",
          author, author, uuid ? uuid : "local", timestamp);
-    printf("data %ld\n%s%s\n",
+    printf("data %zd\n%s%s\n",
            strlen(log) + strlen(gitsvnline), log, gitsvnline);
     repo_diff(revision - 1, revision);
     fputc('\n', stdout);

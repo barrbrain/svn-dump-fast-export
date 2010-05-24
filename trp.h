@@ -51,7 +51,7 @@ struct {								\
 
 /* Priority accessors. */
 #define	trp_prio_get(a_type, a_field, a_node)				\
-    (2654435761*(uint32_t)(uintptr_t)(a_node))
+    (2654435761u*(uint32_t)(uintptr_t)(a_node))
 
 /* Node initializer. */
 #define	trp_node_new(a_base, a_type, a_field, a_trp, a_node) do {	\
