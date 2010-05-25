@@ -38,7 +38,7 @@ static int node_indentity_cmp(node_t *a, node_t *b)
 trp_gen(static, tree_, tree_t, node_t, children, node,
         node_indentity_cmp);
 
-static char *pool_fetch(uint32_t entry)
+char *pool_fetch(uint32_t entry)
 {
     return node_value(node_pointer(entry));
 }
@@ -46,7 +46,10 @@ static char *pool_fetch(uint32_t entry)
 uint32_t pool_intern(char *key)
 {
     node_t *match = NULL;
-    uint32_t key_len = strlen(key) + 1;
+    uint32_t key_len;
+    if (key == NULL)
+        return ~0;
+    key_len = strlen(key) + 1;
     node_t *node = node_pointer(node_alloc(1));
     node->offset = string_alloc(key_len);
     strcpy(node_value(node), key);
@@ -81,13 +84,12 @@ uint32_t pool_tok_seq(uint32_t max, uint32_t *seq, char *delim, char *str)
 {
     char *context;
     uint32_t length, token;
-    for (length = 0, token = pool_tok_r(str, delim, &context);
-         length < max;
+    for (length = 0, token = str ? pool_tok_r(str, delim, &context) : ~0;
+         length < max && ~token;
          length++, token = pool_tok_r(NULL, delim, &context)) {
         seq[length] = token;
-        if (token == ~0)
-            break;
     }
+    seq[length ? length - 1 : 0] = ~0;
     return length;
 }
 
