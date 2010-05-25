@@ -3,9 +3,13 @@
 #include <string.h>
 
 #include "line_buffer.h"
+#include "obj_pool.h"
 
 #define LINE_BUFFER_LEN 10000
 #define COPY_BUFFER_LEN 4096
+
+/* Create memory pool for char sequence of known length */
+obj_pool_gen(blob, char, 4096);
 
 static char line_buffer[LINE_BUFFER_LEN];
 static char byte_buffer[COPY_BUFFER_LEN];
@@ -54,7 +58,9 @@ char *buffer_read_line(void)
 
 char *buffer_read_string(uint32_t len)
 {
-    char *s = malloc(len + 1);
+    char *s;
+    blob_free(blob_pool.size);
+    s = blob_pointer(blob_alloc(len + 1));
     uint32_t offset = 0;
     if (line_buffer_len > line_len) {
         offset = line_buffer_len - line_len;
@@ -113,3 +119,7 @@ void buffer_skip_bytes(uint32_t len)
     }
 }
 
+void buffer_reset(void)
+{
+    blob_reset();
+}

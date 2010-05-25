@@ -14,6 +14,7 @@
 #include "fast_export.h"
 #include "line_buffer.h"
 #include "obj_pool.h"
+#include "string_pool.h"
 
 #define NODEACT_REPLACE 4
 #define NODEACT_DELETE 3
@@ -103,45 +104,38 @@ static void read_props(void)
 {
     struct tm tm;
     uint32_t len;
-    char *key = NULL;
+    uint32_t key = ~0;
     char *val = NULL;
     char *t;
     while ((t = buffer_read_line()) && strcmp(t, "PROPS-END")) {
         if (!strncmp(t, "K ", 2)) {
             len = atoi(&t[2]);
-            key = buffer_read_string(len);
+            key = pool_intern(buffer_read_string(len));
             buffer_read_line();
         } else if (!strncmp(t, "V ", 2)) {
             len = atoi(&t[2]);
             val = buffer_read_string(len);
-            if (!strcmp(key, "svn:log")) {
+            if (key == pool_intern("svn:log")) {
                 rev_ctx.log = log_copy(len, val);
-                free(val);
-            } else if (!strcmp(key, "svn:author")) {
+            } else if (key == pool_intern("svn:author")) {
                 if (rev_ctx.author)
                     free(rev_ctx.author);
-                rev_ctx.author = val;
-            } else if (!strcmp(key, "svn:date")) {
+                rev_ctx.author = strdup(val);
+            } else if (key == pool_intern("svn:date")) {
                 strptime(val, "%FT%T", &tm);
                 timezone = 0;
                 tm.tm_isdst = 0;
                 rev_ctx.timestamp = mktime(&tm);
-            } else if (!strcmp(key, "svn:executable")) {
+            } else if (key == pool_intern("svn:executable")) {
                 if (node_ctx.type == REPO_MODE_BLB) {
                     node_ctx.type = REPO_MODE_EXE;
                 }
-                free(val);
-            } else if (!strcmp(key, "svn:special")) {
+            } else if (key == pool_intern("svn:special")) {
                 if (node_ctx.type == REPO_MODE_BLB) {
                     node_ctx.type = REPO_MODE_LNK;
                 }
-                free(val);
-            } else {
-                free(val);
             }
-            if (key)
-                free(key);
-            key = NULL;
+            key = ~0;
             buffer_read_line();
         }
     }
@@ -275,6 +269,7 @@ static void svndump_read(char *url)
 static void svndump_reset(void)
 {
     log_reset();
+    buffer_reset();
     repo_reset();
     reset_dump_ctx(NULL);
     reset_rev_ctx(0);

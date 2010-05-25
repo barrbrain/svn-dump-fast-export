@@ -11,4 +11,6 @@ void buffer_copy_bytes(uint32_t len);
 
 void buffer_skip_bytes(uint32_t len);
 
+void buffer_reset(void);
+
 #endif
