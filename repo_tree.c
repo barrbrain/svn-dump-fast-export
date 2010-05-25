@@ -106,19 +106,13 @@ static repo_dir_t *repo_clone_dir(repo_dir_t *orig_dir, uint32_t padding)
     return dir_pointer(new_o);
 }
 
-static char repo_path_buffer[REPO_MAX_PATH_LEN];
-static repo_dirent_t *repo_read_dirent(uint32_t revision, char *path)
+static repo_dirent_t *repo_read_dirent(uint32_t revision, uint32_t *path)
 {
-    char *ctx = NULL;
     uint32_t name = 0;
     repo_dir_t *dir = NULL;
     repo_dirent_t *dirent = NULL;
     dir = repo_commit_root_dir(commit_pointer(revision));
-    strncpy(repo_path_buffer, path, REPO_MAX_PATH_LEN);
-    repo_path_buffer[REPO_MAX_PATH_LEN - 1] = '\0';
-    path = repo_path_buffer;
-    for (name = pool_tok_r(path, "/", &ctx);
-         ~name; name = pool_tok_r(NULL, "/", &ctx)) {
+    while (~(name = *path++)) {
         dirent = repo_dirent_by_name(dir, name);
         if (dirent == NULL) {
             return NULL;
@@ -132,22 +126,17 @@ static repo_dirent_t *repo_read_dirent(uint32_t revision, char *path)
 }
 
 static void
-repo_write_dirent(char *path, uint32_t mode, uint32_t content_offset,
+repo_write_dirent(uint32_t *path, uint32_t mode, uint32_t content_offset,
                   uint32_t del)
 {
-    char *ctx;
-    uint32_t name, revision, dirent_o, dir_o, parent_dir_o;
+    uint32_t name, revision, dirent_o = ~0, dir_o = ~0, parent_dir_o = ~0;
     repo_dir_t *dir;
     repo_dirent_t *dirent = NULL;
     revision = active_commit;
     dir = repo_commit_root_dir(commit_pointer(revision));
     dir = repo_clone_dir(dir, 0);
     commit_pointer(revision)->root_dir_offset = dir_offset(dir);
-    strncpy(repo_path_buffer, path, REPO_MAX_PATH_LEN);
-    repo_path_buffer[REPO_MAX_PATH_LEN - 1] = '\0';
-    path = repo_path_buffer;
-    for (name = pool_tok_r(path, "/", &ctx); ~name;
-         name = pool_tok_r(NULL, "/", &ctx)) {
+    while (~(name = *path++)) {
         parent_dir_o = dir_offset(dir);
         dirent = repo_dirent_by_name(dir, name);
         if (dirent == NULL) {
@@ -188,7 +177,7 @@ repo_write_dirent(char *path, uint32_t mode, uint32_t content_offset,
     }
 }
 
-uint32_t repo_copy(uint32_t revision, char *src, char *dst)
+uint32_t repo_copy(uint32_t revision, uint32_t *src, uint32_t *dst)
 {
     uint32_t mode = 0, content_offset = 0;
     repo_dirent_t *src_dirent;
@@ -201,12 +190,12 @@ uint32_t repo_copy(uint32_t revision, char *src, char *dst)
     return mode;
 }
 
-void repo_add(char *path, uint32_t mode, uint32_t blob_mark)
+void repo_add(uint32_t *path, uint32_t mode, uint32_t blob_mark)
 {
     repo_write_dirent(path, mode, blob_mark, 0);
 }
 
-uint32_t repo_replace(char *path, uint32_t blob_mark)
+uint32_t repo_replace(uint32_t *path, uint32_t blob_mark)
 {
     uint32_t mode = 0;
     repo_dirent_t *src_dirent;
@@ -218,12 +207,12 @@ uint32_t repo_replace(char *path, uint32_t blob_mark)
     return mode;
 }
 
-void repo_modify(char *path, uint32_t mode, uint32_t blob_mark)
+void repo_modify(uint32_t *path, uint32_t mode, uint32_t blob_mark)
 {
     repo_write_dirent(path, mode, blob_mark, 0);
 }
 
-void repo_delete(char *path)
+void repo_delete(uint32_t *path)
 {
     repo_write_dirent(path, 0, 0, 1);
 }
@@ -298,7 +287,7 @@ repo_diff_r(uint32_t depth, uint32_t *path, repo_dir_t *dir1,
     }
 }
 
-static uint32_t path_stack[1000];
+static uint32_t path_stack[REPO_MAX_PATH_DEPTH];
 void repo_diff(uint32_t r1, uint32_t r2)
 {
     repo_diff_r(0,

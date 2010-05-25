@@ -44,7 +44,7 @@ static char* log_copy(uint32_t length, char *log)
 
 static struct {
     uint32_t action, propLength, textLength, srcRev, srcMode, mark, type;
-    char *src, *dst;
+    uint32_t src[REPO_MAX_PATH_DEPTH], dst[REPO_MAX_PATH_DEPTH];
 } node_ctx;
 
 static struct {
@@ -63,14 +63,10 @@ static void reset_node_ctx(char *fname)
     node_ctx.action = NODEACT_UNKNOWN;
     node_ctx.propLength = LENGTH_UNKNOWN;
     node_ctx.textLength = LENGTH_UNKNOWN;
-    if (node_ctx.src)
-        free(node_ctx.src);
-    node_ctx.src = NULL;
+    node_ctx.src[0] = ~0;
     node_ctx.srcRev = 0;
     node_ctx.srcMode = 0;
-    if (node_ctx.dst)
-        free(node_ctx.dst);
-    node_ctx.dst = fname;
+    pool_tok_seq(REPO_MAX_PATH_DEPTH, node_ctx.dst, "/", fname);
     node_ctx.mark = 0;
 }
 
@@ -148,7 +144,7 @@ static void handle_node(void)
         read_props();
     }
 
-    if (node_ctx.src && node_ctx.srcRev) {
+    if (node_ctx.srcRev) {
         node_ctx.srcMode =
             repo_copy(node_ctx.srcRev, node_ctx.src, node_ctx.dst);
     }
@@ -169,7 +165,7 @@ static void handle_node(void)
             node_ctx.srcMode = repo_replace(node_ctx.dst, node_ctx.mark);
         }
     } else if (node_ctx.action == NODEACT_ADD) {
-        if (node_ctx.src && node_ctx.srcRev &&
+        if (node_ctx.srcRev &&
             node_ctx.propLength == LENGTH_UNKNOWN &&
             node_ctx.textLength != LENGTH_UNKNOWN) {
             node_ctx.srcMode = repo_replace(node_ctx.dst, node_ctx.mark);
@@ -218,7 +214,7 @@ static void svndump_read(char *url)
             reset_rev_ctx(atoi(val));
         } else if (!strcmp(t, "Node-path")) {
             active_ctx = NODE_CTX;
-            reset_node_ctx(strdup(val));
+            reset_node_ctx(val);
         } else if (!strcmp(t, "Node-kind")) {
             if (!strcmp(val, "dir")) {
                 node_ctx.type = REPO_MODE_DIR;
@@ -241,9 +237,7 @@ static void svndump_read(char *url)
                 node_ctx.action = NODEACT_UNKNOWN;
             }
         } else if (!strcmp(t, "Node-copyfrom-path")) {
-            if (node_ctx.src)
-                free(node_ctx.src);
-            node_ctx.src = strdup(val);
+            pool_tok_seq(REPO_MAX_PATH_DEPTH, node_ctx.src, "/", val);
         } else if (!strcmp(t, "Node-copyfrom-rev")) {
             node_ctx.srcRev = atoi(val);
         } else if (!strcmp(t, "Text-content-length")) {

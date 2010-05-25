@@ -82,9 +82,11 @@ uint32_t pool_tok_seq(uint32_t max, uint32_t *seq, char *delim, char *str)
     char *context;
     uint32_t length, token;
     for (length = 0, token = pool_tok_r(str, delim, &context);
-         length < max && ~token;
+         length < max;
          length++, token = pool_tok_r(NULL, delim, &context)) {
         seq[length] = token;
+        if (token == ~0)
+            break;
     }
     return length;
 }

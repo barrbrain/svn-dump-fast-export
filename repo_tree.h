@@ -10,16 +10,17 @@
 #define REPO_MODE_LNK 0120000
 
 #define REPO_MAX_PATH_LEN 4096
+#define REPO_MAX_PATH_DEPTH 1000
 
-uint32_t repo_copy(uint32_t revision, char *src, char *dst);
+uint32_t repo_copy(uint32_t revision, uint32_t *src, uint32_t *dst);
 
-void repo_add(char *path, uint32_t mode, uint32_t blob_mark);
+void repo_add(uint32_t *path, uint32_t mode, uint32_t blob_mark);
 
-uint32_t repo_replace(char *path, uint32_t blob_mark);
+uint32_t repo_replace(uint32_t *path, uint32_t blob_mark);
 
-void repo_modify(char *path, uint32_t mode, uint32_t blob_mark);
+void repo_modify(uint32_t *path, uint32_t mode, uint32_t blob_mark);
 
-void repo_delete(char *path);
+void repo_delete(uint32_t *path);
 
 void repo_commit(uint32_t revision, char *author, char *log, char *uuid,
                  char *url, time_t timestamp);
