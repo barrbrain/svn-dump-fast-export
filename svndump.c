@@ -49,7 +49,7 @@ static struct {
 static struct {
     uint32_t revision;
     time_t timestamp;
-    char *log, *author, *date;
+    char *log, *author;
 } rev_ctx;
 
 static struct {
@@ -81,9 +81,6 @@ static void reset_rev_ctx(uint32_t revision)
     if (rev_ctx.author)
         free(rev_ctx.author);
     rev_ctx.author = NULL;
-    if (rev_ctx.date)
-        free(rev_ctx.date);
-    rev_ctx.date = NULL;
 }
 
 static void reset_dump_ctx(char *url)
@@ -125,10 +122,7 @@ static void read_props(void)
                     free(rev_ctx.author);
                 rev_ctx.author = val;
             } else if (!strcmp(key, "svn:date")) {
-                if (rev_ctx.date)
-                    free(rev_ctx.date);
-                rev_ctx.date = val;
-                strptime(rev_ctx.date, "%FT%T", &tm);
+                strptime(val, "%FT%T", &tm);
                 timezone = 0;
                 tm.tm_isdst = 0;
                 rev_ctx.timestamp = mktime(&tm);
