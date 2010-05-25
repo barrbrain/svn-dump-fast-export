@@ -116,7 +116,8 @@ static void read_props(void)
             len = atoi(&t[2]);
             val = buffer_read_string(len);
             if (key == pool_intern("svn:log")) {
-                rev_ctx.log = log_copy(len, val);
+                /* Value length excludes terminating nul. */
+                rev_ctx.log = log_copy(len + 1, val);
             } else if (key == pool_intern("svn:author")) {
                 if (rev_ctx.author)
                     free(rev_ctx.author);
