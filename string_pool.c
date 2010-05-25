@@ -77,6 +77,18 @@ void pool_print_seq(uint32_t len, uint32_t *seq, char delim, FILE *stream)
     }
 }
 
+uint32_t pool_tok_seq(uint32_t max, uint32_t *seq, char *delim, char *str)
+{
+    char *context;
+    uint32_t length, token;
+    for (length = 0, token = pool_tok_r(str, delim, &context);
+         length < max && ~token;
+         length++, token = pool_tok_r(NULL, delim, &context)) {
+        seq[length] = token;
+    }
+    return length;
+}
+
 void pool_reset(void)
 {
     node_reset();
