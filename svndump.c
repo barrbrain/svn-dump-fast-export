@@ -13,6 +13,7 @@
 #include "repo_tree.h"
 #include "fast_export.h"
 #include "line_buffer.h"
+#include "obj_pool.h"
 
 #define NODEACT_REPLACE 4
 #define NODEACT_DELETE 3
@@ -28,6 +29,18 @@
 
 #define BLOB_MARK_OFFSET 1000000000
 
+/* Create memory pool for log messages */
+obj_pool_gen(log, char, 4096);
+
+static char* log_copy(uint32_t length, char *log)
+{
+    char *buffer;
+    log_free(log_pool.size);
+    buffer = log_pointer(log_alloc(length));
+    strncpy(buffer, log, length);
+    return buffer;
+}
+
 static struct {
     uint32_t action, propLength, textLength, srcRev, srcMode, mark, type;
     char *src, *dst;
@@ -36,7 +49,7 @@ static struct {
 static struct {
     uint32_t revision;
     time_t timestamp;
-    char *descr, *author, *date;
+    char *log, *author, *date;
 } rev_ctx;
 
 static struct {
@@ -64,9 +77,7 @@ static void reset_rev_ctx(uint32_t revision)
 {
     rev_ctx.revision = revision;
     rev_ctx.timestamp = 0;
-    if (rev_ctx.descr)
-        free(rev_ctx.descr);
-    rev_ctx.descr = NULL;
+    rev_ctx.log = NULL;
     if (rev_ctx.author)
         free(rev_ctx.author);
     rev_ctx.author = NULL;
@@ -107,9 +118,8 @@ static void read_props(void)
             len = atoi(&t[2]);
             val = buffer_read_string(len);
             if (!strcmp(key, "svn:log")) {
-                if (rev_ctx.descr)
-                    free(rev_ctx.descr);
-                rev_ctx.descr = val;
+                rev_ctx.log = log_copy(len, val);
+                free(val);
             } else if (!strcmp(key, "svn:author")) {
                 if (rev_ctx.author)
                     free(rev_ctx.author);
@@ -193,7 +203,7 @@ static void handle_node(void)
 
 static void handle_revision(void)
 {
-    repo_commit(rev_ctx.revision, rev_ctx.author, rev_ctx.descr, dump_ctx.uuid,
+    repo_commit(rev_ctx.revision, rev_ctx.author, rev_ctx.log, dump_ctx.uuid,
                 dump_ctx.url, rev_ctx.timestamp);
 }
 
@@ -270,6 +280,7 @@ static void svndump_read(char *url)
 
 static void svndump_reset(void)
 {
+    log_reset();
     repo_reset();
     reset_dump_ctx(NULL);
     reset_rev_ctx(0);
