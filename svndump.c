@@ -50,13 +50,13 @@ static struct {
 } node_ctx;
 
 static struct {
-    uint32_t revision;
+    uint32_t revision, author;
     time_t timestamp;
-    char *log, *author;
+    char *log;
 } rev_ctx;
 
 static struct {
-    char *uuid, *url;
+    uint32_t uuid, url;
 } dump_ctx;
 
 static void reset_node_ctx(char *fname)
@@ -77,19 +77,13 @@ static void reset_rev_ctx(uint32_t revision)
     rev_ctx.revision = revision;
     rev_ctx.timestamp = 0;
     rev_ctx.log = NULL;
-    if (rev_ctx.author)
-        free(rev_ctx.author);
-    rev_ctx.author = NULL;
+    rev_ctx.author = ~0;
 }
 
-static void reset_dump_ctx(char *url)
+static void reset_dump_ctx(uint32_t url)
 {
-    if (dump_ctx.url)
-        free(dump_ctx.url);
     dump_ctx.url = url;
-    if (dump_ctx.uuid)
-        free(dump_ctx.uuid);
-    dump_ctx.uuid = NULL;
+    dump_ctx.uuid = ~0;
 }
 
 static uint32_t next_blob_mark(void)
@@ -117,9 +111,7 @@ static void read_props(void)
                 /* Value length excludes terminating nul. */
                 rev_ctx.log = log_copy(len + 1, val);
             } else if (key == pool_intern("svn:author")) {
-                if (rev_ctx.author)
-                    free(rev_ctx.author);
-                rev_ctx.author = strdup(val);
+                rev_ctx.author = pool_intern(val);
             } else if (key == pool_intern("svn:date")) {
                 strptime(val, "%FT%T", &tm);
                 rev_ctx.timestamp = mkgmtime(&tm);
@@ -192,7 +184,7 @@ static void handle_revision(void)
                 dump_ctx.url, rev_ctx.timestamp);
 }
 
-static void svndump_read(char *url)
+static void svndump_read(uint32_t url)
 {
     char *val;
     char *t;
@@ -207,7 +199,7 @@ static void svndump_read(char *url)
         *val++ = '\0';
 
         if(!strcmp(t, "UUID")) {
-            dump_ctx.uuid = strdup(val);
+            dump_ctx.uuid = pool_intern(val);
         } else if (!strcmp(t, "Revision-number")) {
             if (active_ctx == NODE_CTX) handle_node();
             if (active_ctx != DUMP_CTX) handle_revision();
@@ -270,14 +262,14 @@ static void svndump_reset(void)
     log_reset();
     buffer_reset();
     repo_reset();
-    reset_dump_ctx(NULL);
+    reset_dump_ctx(~0);
     reset_rev_ctx(0);
     reset_node_ctx(NULL);
 }
 
 int main(int argc, char **argv)
 {
-    svndump_read((argc > 1) ? argv[1] : NULL);
+    svndump_read((argc > 1) ? pool_intern(argv[1]) : ~0);
     svndump_reset();
     return 0;
 }

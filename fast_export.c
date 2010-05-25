@@ -24,22 +24,22 @@ void fast_export_modify(uint32_t depth, uint32_t *path, uint32_t mode,
 }
 
 static char gitsvnline[MAX_GITSVN_LINE_LEN];
-void fast_export_commit(uint32_t revision, char *author, char *log,
-                        char *uuid, char *url, time_t timestamp)
+void fast_export_commit(uint32_t revision, uint32_t author, char *log,
+                        uint32_t uuid, uint32_t url, time_t timestamp)
 {
-    if (!author)
-        author = "nobody";
     if (!log)
         log = "";
-    if (uuid && url) {
+    if (~uuid && ~url) {
         snprintf(gitsvnline, MAX_GITSVN_LINE_LEN, "\n\ngit-svn-id: %s@%d %s\n",
-             url, revision, uuid);
+                 pool_fetch(url), revision, pool_fetch(uuid));
     } else {
         *gitsvnline = '\0';
     }
     printf("commit refs/heads/master\nmark :%d\n", revision);
     printf("committer %s <%s@%s> %ld +0000\n",
-         author, author, uuid ? uuid : "local", timestamp);
+           ~author ? pool_fetch(author) : "nobody",
+           ~author ? pool_fetch(author) : "nobody",
+           ~uuid ? pool_fetch(uuid) : "local", timestamp);
     printf("data %zd\n%s%s\n",
            strlen(log) + strlen(gitsvnline), log, gitsvnline);
     repo_diff(revision - 1, revision);

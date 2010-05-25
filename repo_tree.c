@@ -296,8 +296,8 @@ void repo_diff(uint32_t r1, uint32_t r2)
                 repo_commit_root_dir(commit_pointer(r2)));
 }
 
-void repo_commit(uint32_t revision, char *author, char *log, char *uuid,
-                 char *url, time_t timestamp)
+void repo_commit(uint32_t revision, uint32_t author, char *log, uint32_t uuid,
+                 uint32_t url, time_t timestamp)
 {
     if (revision == 0) {
         active_commit = commit_alloc(1);
