@@ -10,6 +10,8 @@
 #include <stdlib.h>
 #include <time.h>
 
+#include "mkgmtime.h"
+
 #include "repo_tree.h"
 #include "fast_export.h"
 #include "line_buffer.h"
@@ -120,9 +122,7 @@ static void read_props(void)
                 rev_ctx.author = strdup(val);
             } else if (key == pool_intern("svn:date")) {
                 strptime(val, "%FT%T", &tm);
-                timezone = 0;
-                tm.tm_isdst = 0;
-                rev_ctx.timestamp = mktime(&tm);
+                rev_ctx.timestamp = mkgmtime(&tm);
             } else if (key == pool_intern("svn:executable")) {
                 if (node_ctx.type == REPO_MODE_BLB) {
                     node_ctx.type = REPO_MODE_EXE;
