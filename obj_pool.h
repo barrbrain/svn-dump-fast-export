@@ -24,11 +24,13 @@ static struct {                                                            \
 static uint32_t pre##_alloc(uint32_t count)                                \
 {                                                                          \
     uint32_t offset;                                                       \
-    while (pre##_pool.size + count > pre##_pool.capacity) {                \
-        if (pre##_pool.capacity) {                                         \
-            pre##_pool.capacity *= 2;                                      \
-        } else {                                                           \
-            pre##_pool.capacity = initial_capacity;                        \
+    if (pre##_pool.size + count > pre##_pool.capacity) {                   \
+        while (pre##_pool.size + count > pre##_pool.capacity) {            \
+            if (pre##_pool.capacity) {                                     \
+                pre##_pool.capacity *= 2;                                  \
+            } else {                                                       \
+                pre##_pool.capacity = initial_capacity;                    \
+            }                                                              \
         }                                                                  \
         pre##_pool.base =                                                  \
             realloc(pre##_pool.base, pre##_pool.capacity * sizeof(obj_t)); \
