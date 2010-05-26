@@ -209,10 +209,13 @@ static void svndump_read(char *url)
         if(!strcmp(t, "UUID")) {
             dump_ctx.uuid = strdup(val);
         } else if (!strcmp(t, "Revision-number")) {
+            if (active_ctx == NODE_CTX) handle_node();
             if (active_ctx != DUMP_CTX) handle_revision();
             active_ctx = REV_CTX;
             reset_rev_ctx(atoi(val));
         } else if (!strcmp(t, "Node-path")) {
+            if (active_ctx == NODE_CTX)
+                handle_node();
             active_ctx = NODE_CTX;
             reset_node_ctx(val);
         } else if (!strcmp(t, "Node-kind")) {
@@ -258,6 +261,7 @@ static void svndump_read(char *url)
             }
         }
     } 
+    if (active_ctx == NODE_CTX) handle_node();
     if (active_ctx != DUMP_CTX) handle_revision();
 }
 
