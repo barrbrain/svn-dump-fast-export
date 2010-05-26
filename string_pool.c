@@ -73,21 +73,22 @@ uint32_t pool_tok_r(char *str, const char *delim, char **saveptr)
 void pool_print_seq(uint32_t len, uint32_t *seq, char delim, FILE *stream)
 {
     uint32_t i;
-    for (i = 0; i < len; i++) {
+    for (i = 0; i < len && ~seq[i]; i++) {
         fputs(pool_fetch(seq[i]), stream);
-        if (i < len - 1)
+        if (i < len - 1 && ~seq[i + 1])
             fputc(delim, stream);
     }
 }
 
 uint32_t pool_tok_seq(uint32_t max, uint32_t *seq, char *delim, char *str)
 {
-    char *context;
-    uint32_t length, token;
-    for (length = 0, token = str ? pool_tok_r(str, delim, &context) : ~0;
-         length < max && ~token;
-         length++, token = pool_tok_r(NULL, delim, &context)) {
-        seq[length] = token;
+    char *context = NULL;
+    uint32_t length = 0, token = str ? pool_tok_r(str, delim, &context) : ~0;
+    while (length < max) {
+        seq[length++] = token;
+        if (token == ~0)
+            break;
+        token = pool_tok_r(NULL, delim, &context);
     }
     seq[length ? length - 1 : 0] = ~0;
     return length;
