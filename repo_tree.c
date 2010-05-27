@@ -209,6 +209,11 @@ uint32_t repo_replace(uint32_t *path, uint32_t blob_mark)
 
 void repo_modify(uint32_t *path, uint32_t mode, uint32_t blob_mark)
 {
+    repo_dirent_t *src_dirent;
+    src_dirent = repo_read_dirent(active_commit, path);
+    if (src_dirent != NULL && blob_mark == 0) {
+        blob_mark = src_dirent->content_offset;
+    }
     repo_write_dirent(path, mode, blob_mark, 0);
 }
 
@@ -258,7 +263,8 @@ repo_diff_r(uint32_t depth, uint32_t *path, repo_dir_t *dir1,
             fast_export_delete(depth + 1, path);
         } else if (de1->name_offset == de2->name_offset) {
             path[depth] = de1->name_offset;
-            if (de1->content_offset != de2->content_offset) {
+            if (de1->mode != de2->mode ||
+                de1->content_offset != de2->content_offset) {
                 if (repo_dirent_is_dir(de1) && repo_dirent_is_dir(de2)) {
                     repo_diff_r(depth + 1, path,
                                 repo_dir_from_dirent(de1),

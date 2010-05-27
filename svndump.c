@@ -142,13 +142,9 @@ static void read_props(void)
                 strptime(val, "%FT%T", &tm);
                 rev_ctx.timestamp = mkgmtime(&tm);
             } else if (key == keys.svn_executable) {
-                if (node_ctx.type == REPO_MODE_BLB) {
-                    node_ctx.type = REPO_MODE_EXE;
-                }
+                node_ctx.type = REPO_MODE_EXE;
             } else if (key == keys.svn_special) {
-                if (node_ctx.type == REPO_MODE_BLB) {
-                    node_ctx.type = REPO_MODE_LNK;
-                }
+                node_ctx.type = REPO_MODE_LNK;
             }
             key = ~0;
             buffer_read_line();
@@ -176,8 +172,7 @@ static void handle_node(void)
         repo_delete(node_ctx.dst);
     } else if (node_ctx.action == NODEACT_CHANGE || 
                node_ctx.action == NODEACT_REPLACE) {
-        if (node_ctx.propLength != LENGTH_UNKNOWN &&
-            node_ctx.textLength != LENGTH_UNKNOWN) {
+        if (node_ctx.propLength != LENGTH_UNKNOWN) {
             repo_modify(node_ctx.dst, node_ctx.type, node_ctx.mark);
         } else if (node_ctx.textLength != LENGTH_UNKNOWN) {
             node_ctx.srcMode = repo_replace(node_ctx.dst, node_ctx.mark);
