@@ -187,7 +187,7 @@ static void handle_node(void)
             node_ctx.propLength == LENGTH_UNKNOWN &&
             node_ctx.textLength != LENGTH_UNKNOWN) {
             node_ctx.srcMode = repo_replace(node_ctx.dst, node_ctx.mark);
-        } else if (node_ctx.type == REPO_MODE_DIR ||
+        } else if (node_ctx.type == REPO_MODE_DIR && !node_ctx.srcRev ||
                    node_ctx.textLength != LENGTH_UNKNOWN){
             repo_add(node_ctx.dst, node_ctx.type, node_ctx.mark);
         }
