@@ -7,6 +7,8 @@ use SVN::Fs;
 use Date::Parse;
 use File::Temp;
 
+my $pool = SVN::Pool->new_default;
+
 my $mirror = '/path/to/mirror';
 
 my $repos = SVN::Repos::open($mirror);
@@ -26,6 +28,7 @@ my $marks;
 
 $repos->get_logs([''], 1, $maxrev, 1, 0, sub {
   my ($paths, $rev, $author, $date, $log, $pool) = @_;
+  my $pool = SVN::Pool->new_default_sub;
 
   print "# SVN_AUTHOR: $author\n";
   print "# SVN_DATE: $date\n";
@@ -48,15 +51,13 @@ $repos->get_logs([''], 1, $maxrev, 1, 0, sub {
     my $action = $node->action;
 
     if ($action eq 'D') {
-      print $commitlog "D $file\n";
+      my $path = substr($file, 1);
+      print $commitlog "D $path\n";
       next;
     }
 
     if ($root->is_dir($file, $pool) ) {
-      # Recursive modify
-      if (defined $node->copyfrom_rev) {
-#        modifydir($root, $file);
-      }
+      modifydir($root, $file, $pool);
     } else {
       modifyfile($root, $file, $pool);
     }
@@ -72,8 +73,24 @@ $repos->get_logs([''], 1, $maxrev, 1, 0, sub {
   print "progress to revision $rev\n"
 });
 
+sub modifydir {
+  my ($root, $dir, $pool) = @_;
+  my $pool = SVN::Pool->new_default_sub;
+
+  my $dirents = $root->dir_entries($dir, $pool);
+  for my $name (keys %$dirents) {
+    my $entry = $dirents->{$name};
+    if ($entry->kind == $SVN::Node::dir) {
+      modifydir($root, $dir.'/'.$name, $pool);
+    } else {
+      modifyfile($root, $dir.'/'.$name, $pool);
+    }
+  }
+}
+
 sub modifyfile {
   my ($root, $file, $pool) = @_;
+  my $pool = SVN::Pool->new_default_sub;
 
   my $proplist = $root->node_proplist($file, $pool);
   my $md5 = $root->file_md5_checksum($file, $pool);
