@@ -57,6 +57,8 @@ $repos->get_logs([''], 1, $maxrev, 1, 0, sub {
     }
 
     if ($root->is_dir($file, $pool) ) {
+      my $path = substr($file, 1);
+      print $commitlog "D $path\n";
       modifydir($root, $file, $pool);
     } else {
       modifyfile($root, $file, $pool);

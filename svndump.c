@@ -172,7 +172,10 @@ static void handle_node(void)
         repo_delete(node_ctx.dst);
     } else if (node_ctx.action == NODEACT_CHANGE || 
                node_ctx.action == NODEACT_REPLACE) {
-        if (node_ctx.propLength != LENGTH_UNKNOWN) {
+        if (node_ctx.action == NODEACT_REPLACE &&
+            node_ctx.type == REPO_MODE_DIR) {
+            repo_replace(node_ctx.dst, node_ctx.mark);
+        } else if (node_ctx.propLength != LENGTH_UNKNOWN ) {
             repo_modify(node_ctx.dst, node_ctx.type, node_ctx.mark);
         } else if (node_ctx.textLength != LENGTH_UNKNOWN) {
             node_ctx.srcMode = repo_replace(node_ctx.dst, node_ctx.mark);
