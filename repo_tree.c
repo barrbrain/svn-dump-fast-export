@@ -5,43 +5,37 @@
 #include "obj_pool.h"
 #include "fast_export.h"
 
-typedef struct repo_dirent_s repo_dirent_t;
-
-struct repo_dirent_s {
+struct repo_dirent {
 	uint32_t name_offset;
 	uint32_t mode;
 	uint32_t content_offset;
 };
 
-typedef struct repo_dir_s repo_dir_t;
-
-struct repo_dir_s {
+struct repo_dir {
 	uint32_t size;
 	uint32_t first_offset;
 };
 
-typedef struct repo_commit_s repo_commit_t;
-
-struct repo_commit_s {
+struct repo_commit {
 	uint32_t mark;
 	uint32_t root_dir_offset;
 };
 
 /* Generate memory pools for commit, dir and dirent */
-obj_pool_gen(commit, repo_commit_t, 4096);
-obj_pool_gen(dir, repo_dir_t, 4096);
-obj_pool_gen(dirent, repo_dirent_t, 4096);
+obj_pool_gen(commit, struct repo_commit, 4096);
+obj_pool_gen(dir, struct repo_dir, 4096);
+obj_pool_gen(dirent, struct repo_dirent, 4096);
 
 static uint32_t num_dirs_saved = 0;
 static uint32_t num_dirents_saved;
 static uint32_t active_commit = -1;
 
-static repo_dir_t *repo_commit_root_dir(repo_commit_t *commit)
+static struct repo_dir *repo_commit_root_dir(struct repo_commit *commit)
 {
 	return dir_pointer(commit->root_dir_offset);
 }
 
-static repo_dirent_t *repo_first_dirent(repo_dir_t *dir)
+static struct repo_dirent *repo_first_dirent(struct repo_dir *dir)
 {
 	return dirent_pointer(dir->first_offset);
 }
@@ -54,23 +48,23 @@ static int repo_dirent_name_cmp(const void *a, const void *b)
 		 < ((repo_dirent_t *) b)->name_offset);
 }
 
-static repo_dirent_t *repo_dirent_by_name(repo_dir_t *dir,
+static struct repo_dirent *repo_dirent_by_name(struct repo_dir *dir,
                                           uint32_t name_offset)
 {
-	repo_dirent_t key;
+	struct repo_dirent key;
 	if (dir == NULL || dir->size == 0)
 		return NULL;
 	key.name_offset = name_offset;
 	return bsearch(&key, repo_first_dirent(dir), dir->size,
-				   sizeof(repo_dirent_t), repo_dirent_name_cmp);
+				   sizeof(struct repo_dirent), repo_dirent_name_cmp);
 }
 
-static int repo_dirent_is_dir(repo_dirent_t *dirent)
+static int repo_dirent_is_dir(struct repo_dirent *dirent)
 {
 	return dirent != NULL && dirent->mode == REPO_MODE_DIR;
 }
 
-static repo_dir_t *repo_dir_from_dirent(repo_dirent_t *dirent)
+static struct repo_dir *repo_dir_from_dirent(struct repo_dirent *dirent)
 {
 	if (!repo_dirent_is_dir(dirent))
 		return NULL;
@@ -85,7 +79,7 @@ static uint32_t dir_with_dirents_alloc(uint32_t size)
 	return offset;
 }
 
-static repo_dir_t *repo_clone_dir(repo_dir_t *orig_dir, uint32_t padding)
+static struct repo_dir *repo_clone_dir(struct repo_dir *orig_dir, uint32_t padding)
 {
 	uint32_t orig_o, new_o, dirent_o;
 	orig_o = dir_offset(orig_dir);
@@ -100,17 +94,17 @@ static repo_dir_t *repo_clone_dir(repo_dir_t *orig_dir, uint32_t padding)
 		dirent_o = dirent_alloc(orig_dir->size + padding);
 	}
 	memcpy(dirent_pointer(dirent_o), repo_first_dirent(orig_dir),
-		   orig_dir->size * sizeof(repo_dirent_t));
+		   orig_dir->size * sizeof(struct repo_dirent));
 	dir_pointer(new_o)->size = orig_dir->size + padding;
 	dir_pointer(new_o)->first_offset = dirent_o;
 	return dir_pointer(new_o);
 }
 
-static repo_dirent_t *repo_read_dirent(uint32_t revision, uint32_t *path)
+static struct repo_dirent *repo_read_dirent(uint32_t revision, uint32_t *path)
 {
 	uint32_t name = 0;
-	repo_dir_t *dir = NULL;
-	repo_dirent_t *dirent = NULL;
+	struct repo_dir *dir = NULL;
+	struct repo_dirent *dirent = NULL;
 	dir = repo_commit_root_dir(commit_pointer(revision));
 	while (~(name = *path++)) {
 		dirent = repo_dirent_by_name(dir, name);
@@ -130,8 +124,8 @@ repo_write_dirent(uint32_t *path, uint32_t mode, uint32_t content_offset,
                   uint32_t del)
 {
 	uint32_t name, revision, dirent_o = ~0, dir_o = ~0, parent_dir_o = ~0;
-	repo_dir_t *dir;
-	repo_dirent_t *dirent = NULL;
+	struct repo_dir *dir;
+	struct repo_dirent *dirent = NULL;
 	revision = active_commit;
 	dir = repo_commit_root_dir(commit_pointer(revision));
 	dir = repo_clone_dir(dir, 0);
@@ -145,7 +139,7 @@ repo_write_dirent(uint32_t *path, uint32_t mode, uint32_t content_offset,
 			dirent->name_offset = name;
 			dirent->mode = REPO_MODE_DIR;
 			qsort(repo_first_dirent(dir), dir->size,
-				  sizeof(repo_dirent_t), repo_dirent_name_cmp);
+				  sizeof(struct repo_dirent), repo_dirent_name_cmp);
 			dirent = repo_dirent_by_name(dir, name);
 			dir_o = dir_with_dirents_alloc(0);
 			dirent->content_offset = dir_o;
@@ -171,7 +165,7 @@ repo_write_dirent(uint32_t *path, uint32_t mode, uint32_t content_offset,
 			dirent->name_offset = ~0;
 			dir = dir_pointer(parent_dir_o);
 			qsort(repo_first_dirent(dir), dir->size,
-				  sizeof(repo_dirent_t), repo_dirent_name_cmp);
+				  sizeof(struct repo_dirent), repo_dirent_name_cmp);
 			dir->size--;
 		}
 	}
@@ -180,7 +174,7 @@ repo_write_dirent(uint32_t *path, uint32_t mode, uint32_t content_offset,
 uint32_t repo_copy(uint32_t revision, uint32_t *src, uint32_t *dst)
 {
 	uint32_t mode = 0, content_offset = 0;
-	repo_dirent_t *src_dirent;
+	struct repo_dirent *src_dirent;
 	src_dirent = repo_read_dirent(revision, src);
 	if (src_dirent != NULL) {
 		mode = src_dirent->mode;
@@ -198,7 +192,7 @@ void repo_add(uint32_t *path, uint32_t mode, uint32_t blob_mark)
 uint32_t repo_replace(uint32_t *path, uint32_t blob_mark)
 {
 	uint32_t mode = 0;
-	repo_dirent_t *src_dirent;
+	struct repo_dirent *src_dirent;
 	src_dirent = repo_read_dirent(active_commit, path);
 	if (src_dirent != NULL) {
 		mode = src_dirent->mode;
@@ -209,7 +203,7 @@ uint32_t repo_replace(uint32_t *path, uint32_t blob_mark)
 
 void repo_modify(uint32_t *path, uint32_t mode, uint32_t blob_mark)
 {
-	repo_dirent_t *src_dirent;
+	struct repo_dirent *src_dirent;
 	src_dirent = repo_read_dirent(active_commit, path);
 	if (src_dirent != NULL && blob_mark == 0) {
 		blob_mark = src_dirent->content_offset;
@@ -222,11 +216,9 @@ void repo_delete(uint32_t *path)
 	repo_write_dirent(path, 0, 0, 1);
 }
 
-static void
-repo_git_add_r(uint32_t depth, uint32_t *path, repo_dir_t *dir);
+static void repo_git_add_r(uint32_t depth, uint32_t *path, struct repo_dir *dir);
 
-static void
-repo_git_add(uint32_t depth, uint32_t *path, repo_dirent_t *dirent)
+static void repo_git_add(uint32_t depth, uint32_t *path, struct repo_dirent *dirent)
 {
 	if (repo_dirent_is_dir(dirent)) {
 		repo_git_add_r(depth, path, repo_dir_from_dirent(dirent));
@@ -235,11 +227,10 @@ repo_git_add(uint32_t depth, uint32_t *path, repo_dirent_t *dirent)
 	}
 }
 
-static void
-repo_git_add_r(uint32_t depth, uint32_t *path, repo_dir_t *dir)
+static void repo_git_add_r(uint32_t depth, uint32_t *path, struct repo_dir *dir)
 {
 	uint32_t o;
-	repo_dirent_t *de;
+	struct repo_dirent *de;
 	de = repo_first_dirent(dir);
 	for (o = 0; o < dir->size; o++) {
 		path[depth] = de[o].name_offset;
@@ -247,11 +238,10 @@ repo_git_add_r(uint32_t depth, uint32_t *path, repo_dir_t *dir)
 	}
 }
 
-static void
-repo_diff_r(uint32_t depth, uint32_t *path, repo_dir_t *dir1,
-            repo_dir_t *dir2)
+static void repo_diff_r(uint32_t depth, uint32_t *path, struct repo_dir *dir1,
+			struct repo_dir *dir2)
 {
-	repo_dirent_t *de1, *de2, *max_de1, *max_de2;
+	struct repo_dirent *de1, *de2, *max_de1, *max_de2;
 	de1 = repo_first_dirent(dir1);
 	de2 = repo_first_dirent(dir2);
 	max_de1 = &de1[dir1->size];
