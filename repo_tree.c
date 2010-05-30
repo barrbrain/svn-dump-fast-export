@@ -42,10 +42,10 @@ static struct repo_dirent *repo_first_dirent(struct repo_dir *dir)
 
 static int repo_dirent_name_cmp(const void *a, const void *b)
 {
-	return (((repo_dirent_t *) a)->name_offset
-			> ((repo_dirent_t *) b)->name_offset) -
-		(((repo_dirent_t *) a)->name_offset
-		 < ((repo_dirent_t *) b)->name_offset);
+	const struct repo_dirent *dirent1 = a, *dirent2 = b;
+	uint32_t a_offset = dirent1->name_offset;
+	uint32_t b_offset = dirent2->name_offset;
+	return (a_offset > b_offset) - (a_offset < b_offset);
 }
 
 static struct repo_dirent *repo_dirent_by_name(struct repo_dir *dir,
@@ -251,7 +251,10 @@ static void repo_diff_r(uint32_t depth, uint32_t *path, struct repo_dir *dir1,
 		if (de1->name_offset < de2->name_offset) {
 			path[depth] = (de1++)->name_offset;
 			fast_export_delete(depth + 1, path);
-		} else if (de1->name_offset == de2->name_offset) {
+		} else if (de1->name_offset > de2->name_offset) {
+			path[depth] = de2->name_offset;
+			repo_git_add(depth + 1, path, de2++);
+		} else {
 			path[depth] = de1->name_offset;
 			if (de1->mode != de2->mode ||
 				de1->content_offset != de2->content_offset) {
@@ -268,9 +271,6 @@ static void repo_diff_r(uint32_t depth, uint32_t *path, struct repo_dir *dir1,
 			}
 			de1++;
 			de2++;
-		} else {
-			path[depth] = de2->name_offset;
-			repo_git_add(depth + 1, path, de2++);
 		}
 	}
 	while (de1 < max_de1) {
