@@ -1,6 +1,6 @@
 /* mkgmtime.c - make time corresponding to a GMT timeval struct
- $Id: mkgmtime.c,v 1.10 2003/10/22 18:50:12 rjs3 Exp $
- 
+ * $Id: mkgmtime.c,v 1.10 2003/10/22 18:50:12 rjs3 Exp $
+ *
  * Copyright (c) 1998-2003 Carnegie Mellon University.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -38,9 +38,8 @@
  * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN
  * AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
  * OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- *
- *
  */
+
 /*
  * Copyright (c) 1987, 1989, 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -78,65 +77,63 @@
  */
 
 /*
-** Adapted from code provided by Robert Elz, who writes:
-**	The "best" way to do mktime I think is based on an idea of Bob
-**	Kridle's (so its said...) from a long time ago. (mtxinu!kridle now).
-**	It does a binary search of the time_t space.  Since time_t's are
-**	just 32 bits, its a max of 32 iterations (even at 64 bits it
-**	would still be very reasonable).
-*/
+ * Adapted from code provided by Robert Elz, who writes:
+ *	The "best" way to do mktime I think is based on an idea of Bob
+ *	Kridle's (so its said...) from a long time ago. (mtxinu!kridle now).
+ *	It does a binary search of the time_t space.  Since time_t's are
+ *	just 32 bits, its a max of 32 iterations (even at 64 bits it
+ *	would still be very reasonable).
+ */
 
 #include "mkgmtime.h"
 
 #ifndef WRONG
-#define WRONG	(-1)
+#define WRONG (-1)
 #endif /* !defined WRONG */
 
-static int
-tmcomp(atmp, btmp)
-register const struct tm * const atmp;
-register const struct tm * const btmp;
+static int tmcomp(atmp, btmp)
+register const struct tm *const atmp;
+register const struct tm *const btmp;
 {
-	register int	result;
+	register int result;
 
 	if ((result = (atmp->tm_year - btmp->tm_year)) == 0 &&
-		(result = (atmp->tm_mon - btmp->tm_mon)) == 0 &&
-		(result = (atmp->tm_mday - btmp->tm_mday)) == 0 &&
-		(result = (atmp->tm_hour - btmp->tm_hour)) == 0 &&
-		(result = (atmp->tm_min - btmp->tm_min)) == 0)
-			result = atmp->tm_sec - btmp->tm_sec;
+	    (result = (atmp->tm_mon - btmp->tm_mon)) == 0 &&
+	    (result = (atmp->tm_mday - btmp->tm_mday)) == 0 &&
+	    (result = (atmp->tm_hour - btmp->tm_hour)) == 0 &&
+	    (result = (atmp->tm_min - btmp->tm_min)) == 0)
+		result = atmp->tm_sec - btmp->tm_sec;
 	return result;
 }
 
-time_t
-mkgmtime(tmp)
-struct tm * const	tmp;
+time_t mkgmtime(tmp) struct tm *const tmp;
 {
-	register int			dir;
-	register int			bits;
-	register int			saved_seconds;
-	time_t				t;
-	struct tm			yourtm, *mytm;
+	register int dir;
+	register int bits;
+	register int saved_seconds;
+	time_t t;
+	struct tm yourtm, *mytm;
 
 	yourtm = *tmp;
 	saved_seconds = yourtm.tm_sec;
 	yourtm.tm_sec = 0;
 	/*
-	** Calculate the number of magnitude bits in a time_t
-	** (this works regardless of whether time_t is
-	** signed or unsigned, though lint complains if unsigned).
-	*/
+	 * Calculate the number of magnitude bits in a time_t
+	 * (this works regardless of whether time_t is
+	 * signed or unsigned, though lint complains if unsigned).
+	 */
 	for (bits = 0, t = 1; t > 0; ++bits, t <<= 1)
 		;
 	/*
-	** If time_t is signed, then 0 is the median value,
-	** if time_t is unsigned, then 1 << bits is median.
-	*/
+	 * If time_t is signed, then 0 is the median value,
+	 * if time_t is unsigned, then 1 << bits is median.
+	 */
 	t = (t < 0) ? 0 : ((time_t) 1 << bits);
 
 	/* Some gmtime() implementations are broken and will return
 	 * NULL for time_ts larger than 40 bits even on 64-bit platforms
-	 * so we'll just cap it at 40 bits */
+	 * so we'll just cap it at 40 bits
+	 */
 	if(bits > 40) bits = 40;
 
 	for ( ; ; ) {
@@ -152,7 +149,8 @@ struct tm * const	tmp;
 				--t;
 			else if (dir > 0)
 				t -= (time_t) 1 << bits;
-			else	t += (time_t) 1 << bits;
+			else
+				t += (time_t) 1 << bits;
 			continue;
 		}
 		break;
@@ -160,4 +158,3 @@ struct tm * const	tmp;
 	t += saved_seconds;
 	return t;
 }
-

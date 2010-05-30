@@ -1,6 +1,6 @@
 /* mkgmtime.h -- make a time_t from a gmtime struct tm
- $Id: mkgmtime.h,v 1.5 2003/02/13 20:15:41 rjs3 Exp $
- 
+ * $Id: mkgmtime.h,v 1.5 2003/02/13 20:15:41 rjs3 Exp $
+ *
  * Copyright (c) 1998-2003 Carnegie Mellon University.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
