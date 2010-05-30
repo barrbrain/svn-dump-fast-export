@@ -1,16 +1,16 @@
 #include <string.h>
+#include <stdint.h>
 
 #include "trp.h"
 #include "obj_pool.h"
 #include "string_pool.h"
 
 typedef struct node_s node_t;
-typedef trp(node_t) tree_t;
-static tree_t tree = { ~0 };
+static struct trp_root tree = { ~0 };
 
 struct node_s {
 	uint32_t offset;
-	trp_node(node_t) children;
+	struct trp_node children;
 };
 
 /* Create two memory pools: one for node_t, and another for strings */
@@ -35,7 +35,7 @@ static int node_indentity_cmp(node_t *a, node_t *b)
 }
 
 /* Build a Treap from the node_s structure (a trp_node w/ offset) */
-trp_gen(static, tree_, tree_t, node_t, children, node, node_indentity_cmp);
+trp_gen(static, tree_, node_t, children, node, node_indentity_cmp);
 
 char *pool_fetch(uint32_t entry)
 {

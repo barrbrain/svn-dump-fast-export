@@ -1,0 +1,62 @@
+TODO: Update this documentation to match the changes to trp.h
+
+The trp_gen() macro generates a type-specific treap implementation,
+based on the above cpp macros.
+
+Arguments:
+
+  a_attr     : Function attribute for generated functions (ex: static).
+  a_pre      : Prefix for generated functions (ex: treap_).
+  a_t_type   : Type for treap data structure (ex: treap_t).
+  a_type     : Type for treap node data structure (ex: treap_node_t).
+  a_field    : Name of treap node linkage (ex: treap_link).
+  a_base     : Expression for the base pointer from which nodes are offset.
+  a_cmp      : Node comparison function name, with the following prototype:
+                 int (a_cmp *)(a_type *a_node, a_type *a_other);
+                                       ^^^^^^
+                                    or a_key
+               Interpretation of comparision function return values:
+                 -1 : a_node <  a_other
+                  0 : a_node == a_other
+                  1 : a_node >  a_other
+               In all cases, the a_node or a_key macro argument is the first
+               argument to the comparison function, which makes it possible
+               to write comparison functions that treat the first argument
+               specially.
+
+Assuming the following setup:
+
+  typedef struct ex_node_s ex_node_t;
+  struct ex_node_s {
+      trp_node(ex_node_t) ex_link;
+  };
+  typedef trp(ex_node_t) ex_t;
+  static ex_node_t ex_base[MAX_NODES];
+  trp_gen(static, ex_, ex_t, ex_node_t, ex_link, ex_base, ex_cmp)
+
+The following API is generated:
+
+  static void
+  ex_new(ex_t *treap);
+      Description: Initialize a treap structure.
+      Args:
+        treap: Pointer to an uninitialized treap object.
+
+  static ex_node_t *
+  ex_psearch(ex_t *treap, ex_node_t *key);
+      Description: Search for node that matches key.  If no match is found,
+                   return what would be key's successor/predecessor, were
+                   key in treap.
+      Args:
+        treap: Pointer to a initialized treap object.
+        key  : Search key.
+      Ret: Node in treap that matches key, or if no match, hypothetical
+           node's successor/predecessor (NULL if no successor/predecessor).
+
+  static void
+  ex_insert(ex_t *treap, ex_node_t *node);
+      Description: Insert node into treap.
+      Args:
+        treap: Pointer to a initialized treap object.
+        node : Node to be inserted into treap.
+
