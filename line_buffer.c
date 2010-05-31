@@ -23,18 +23,17 @@ char *buffer_read_line(void)
 
 	if (line_len) {
 		memmove(line_buffer, &line_buffer[line_len],
-                line_buffer_len - line_len);
+		                line_buffer_len - line_len);
 		line_buffer_len -= line_len;
 		line_len = 0;
 	}
 
 	end = memchr(line_buffer, '\n', line_buffer_len);
 	while (line_buffer_len < LINE_BUFFER_LEN - 1 &&
-		   !feof(stdin) && NULL == end) {
-		n_read =
-			fread(&line_buffer[line_buffer_len], 1,
-				  LINE_BUFFER_LEN - 1 - line_buffer_len,
-				  stdin);
+		   !feof(stdin) && !ferror(stdin) && NULL == end) {
+		n_read = fread(&line_buffer[line_buffer_len], 1,
+				LINE_BUFFER_LEN - 1 - line_buffer_len,
+				stdin);
 		end = memchr(&line_buffer[line_buffer_len], '\n', n_read);
 		line_buffer_len += n_read;
 	}
@@ -69,25 +68,20 @@ char *buffer_read_string(uint32_t len)
 		memcpy(s, &line_buffer[line_len], offset);
 		line_len += offset;
 	}
-	while (offset < len && !feof(stdin)) {
+	if (offset < len)
 		offset += fread(&s[offset], 1, len - offset, stdin);
-	}
 	s[offset] = '\0';
 	return s;
 }
 
 void buffer_copy_bytes(uint32_t len)
 {
-	uint32_t in, out;
+	uint32_t in;
 	if (line_buffer_len > line_len) {
 		in = line_buffer_len - line_len;
 		if (in > len)
 			in = len;
-		out = 0;
-		while (out < in && !ferror(stdout)) {
-			out +=
-				fwrite(&line_buffer[line_len + out], 1, in - out, stdout);
-		}
+		fwrite(&line_buffer[line_len], 1, in, stdout);
 		len -= in;
 		line_len += in;
 	}
@@ -95,10 +89,7 @@ void buffer_copy_bytes(uint32_t len)
 		in = len < COPY_BUFFER_LEN ? len : COPY_BUFFER_LEN;
 		in = fread(byte_buffer, 1, in, stdin);
 		len -= in;
-		out = 0;
-		while (out < in && !ferror(stdout)) {
-			out += fwrite(&byte_buffer[out], 1, in - out, stdout);
-		}
+		fwrite(byte_buffer, 1, in, stdout);
 	}
 }
 
@@ -112,7 +103,7 @@ void buffer_skip_bytes(uint32_t len)
 		line_len += in;
 		len -= in;
 	}
-	while (len > 0 && !feof(stdin)) {
+	while (len > 0 && !feof(stdin) && !ferror(stdin)) {
 		in = len < COPY_BUFFER_LEN ? len : COPY_BUFFER_LEN;
 		in = fread(byte_buffer, 1, in, stdin);
 		len -= in;
