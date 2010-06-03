@@ -26,11 +26,12 @@
  */
 #define obj_pool_gen(pre, obj_t, initial_capacity) \
 static struct { \
+	uint32_t committed; \
 	uint32_t size; \
 	uint32_t capacity; \
 	obj_t *base; \
         FILE *file; \
-} pre##_pool = { 0, 0, NULL, NULL}; \
+} pre##_pool = { 0, 0, 0, NULL, NULL}; \
 static void pre##_init(void) \
 { \
 	struct stat st; \

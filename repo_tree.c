@@ -31,8 +31,6 @@ obj_pool_gen(commit, struct repo_commit, 4096);
 obj_pool_gen(dir, struct repo_dir, 4096);
 obj_pool_gen(dirent, struct repo_dirent, 4096);
 
-static uint32_t num_dirs_saved;
-static uint32_t num_dirents_saved;
 static uint32_t active_commit;
 static uint32_t _mark;
 
@@ -94,7 +92,7 @@ static struct repo_dir *repo_clone_dir(struct repo_dir *orig_dir, uint32_t paddi
 {
 	uint32_t orig_o, new_o, dirent_o;
 	orig_o = dir_offset(orig_dir);
-	if (orig_o < num_dirs_saved) {
+	if (orig_o < dir_pool.committed) {
 		new_o = dir_with_dirents_alloc(orig_dir->size + padding);
 		orig_dir = dir_pointer(orig_o);
 		dirent_o = dir_pointer(new_o)->first_offset;
@@ -308,8 +306,8 @@ void repo_commit(uint32_t revision, uint32_t author, char *log, uint32_t uuid,
                  uint32_t url, time_t timestamp)
 {
 	fast_export_commit(revision, author, log, uuid, url, timestamp);
-	num_dirs_saved = dir_pool.size;
-	num_dirents_saved = dirent_pool.size;
+	dir_pool.committed = dir_pool.size;
+	dirent_pool.committed = dirent_pool.size;
 	active_commit = commit_alloc(1);
 	commit_pointer(active_commit)->root_dir_offset =
 		commit_pointer(active_commit - 1)->root_dir_offset;
@@ -332,8 +330,8 @@ void repo_init() {
 	dir_init();
 	dirent_init();
 	mark_init();
-	num_dirs_saved = dir_pool.size;
-	num_dirents_saved = dirent_pool.size;
+	dir_pool.committed = dir_pool.size;
+	dirent_pool.committed = dirent_pool.size;
 	active_commit = commit_pool.size - 1;
 	if (active_commit == -1) {
 		commit_alloc(2);
@@ -344,8 +342,8 @@ void repo_init() {
 		commit_pointer(1)->root_dir_offset =
 			commit_pointer(0)->root_dir_offset;
 		active_commit = 1;
-		num_dirs_saved = dir_pool.size;
-		num_dirents_saved = dirent_pool.size;
+		dir_pool.committed = dir_pool.size;
+		dirent_pool.committed = dirent_pool.size;
 	}
 }
 
