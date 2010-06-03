@@ -7,6 +7,8 @@
 
 #define MAX_GITSVN_LINE_LEN 4096
 
+static uint32_t first_commit_done;
+
 void fast_export_delete(uint32_t depth, uint32_t *path)
 {
 	putchar('D');
@@ -42,6 +44,11 @@ void fast_export_commit(uint32_t revision, uint32_t author, char *log,
 		   ~uuid ? pool_fetch(uuid) : "local", timestamp);
 	printf("data %zd\n%s%s\n",
 		   strlen(log) + strlen(gitsvnline), log, gitsvnline);
+	if (!first_commit_done) {
+		if (revision > 1)
+			printf("from refs/heads/master^0\n");
+		first_commit_done = 1;
+	}
 	repo_diff(revision - 1, revision);
 	fputc('\n', stdout);
 
