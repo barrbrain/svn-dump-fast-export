@@ -26,9 +26,15 @@ obj_pool_gen(commit, struct repo_commit, 4096);
 obj_pool_gen(dir, struct repo_dir, 4096);
 obj_pool_gen(dirent, struct repo_dirent, 4096);
 
-static uint32_t num_dirs_saved = 0;
+static uint32_t num_dirs_saved;
 static uint32_t num_dirents_saved;
-static uint32_t active_commit = -1;
+static uint32_t active_commit;
+static uint32_t _mark;
+
+uint32_t next_blob_mark(void)
+{
+	return _mark++;
+}
 
 static struct repo_dir *repo_commit_root_dir(struct repo_commit *commit)
 {
@@ -296,18 +302,46 @@ void repo_diff(uint32_t r1, uint32_t r2)
 void repo_commit(uint32_t revision, uint32_t author, char *log, uint32_t uuid,
                  uint32_t url, time_t timestamp)
 {
-	if (revision == 0) {
-		active_commit = commit_alloc(1);
-		commit_pointer(active_commit)->root_dir_offset =
-			dir_with_dirents_alloc(0);
-	} else {
-		fast_export_commit(revision, author, log, uuid, url, timestamp);
-	}
+	fast_export_commit(revision, author, log, uuid, url, timestamp);
 	num_dirs_saved = dir_pool.size;
 	num_dirents_saved = dirent_pool.size;
 	active_commit = commit_alloc(1);
 	commit_pointer(active_commit)->root_dir_offset =
 		commit_pointer(active_commit - 1)->root_dir_offset;
+}
+
+static void mark_init(void)
+{
+	uint32_t i;
+	_mark = 0;
+	for (i = 0; i < dirent_pool.size; i++)
+		if (!repo_dirent_is_dir(dirent_pointer(i)) &&
+			dirent_pointer(i)->content_offset > _mark)
+			_mark = dirent_pointer(i)->content_offset;
+	_mark++;
+}
+
+void repo_init() {
+	pool_init();
+	commit_init();
+	dir_init();
+	dirent_init();
+	mark_init();
+	num_dirs_saved = dir_pool.size;
+	num_dirents_saved = dirent_pool.size;
+	active_commit = commit_pool.size - 1;
+	if (active_commit == -1) {
+		commit_alloc(2);
+		/* Create empty tree for commit 0. */
+		commit_pointer(0)->root_dir_offset =
+			dir_with_dirents_alloc(0);
+		/* Preallocate commit 1, ready for changes. */
+		commit_pointer(1)->root_dir_offset =
+			commit_pointer(0)->root_dir_offset;
+		active_commit = 1;
+		num_dirs_saved = dir_pool.size;
+		num_dirents_saved = dirent_pool.size;
+	}
 }
 
 void repo_reset(void)

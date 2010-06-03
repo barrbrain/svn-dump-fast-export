@@ -30,8 +30,6 @@
 
 #define LENGTH_UNKNOWN (~0)
 
-#define BLOB_MARK_OFFSET 1000000000
-
 /* Create memory pool for log messages */
 obj_pool_gen(log, char, 4096);
 
@@ -110,12 +108,6 @@ static void init_keys(void)
 	keys.text_content_length = pool_intern("Text-content-length");
 	keys.prop_content_length = pool_intern("Prop-content-length");
 	keys.content_length = pool_intern("Content-length");
-}
-
-static uint32_t next_blob_mark(void)
-{
-	static uint32_t mark = BLOB_MARK_OFFSET;
-	return mark++;
 }
 
 static void read_props(void)
@@ -203,8 +195,9 @@ static void handle_node(void)
 
 static void handle_revision(void)
 {
-	repo_commit(rev_ctx.revision, rev_ctx.author, rev_ctx.log, dump_ctx.uuid,
-		    dump_ctx.url, rev_ctx.timestamp);
+	if (rev_ctx.revision)
+		repo_commit(rev_ctx.revision, rev_ctx.author, rev_ctx.log,
+			dump_ctx.uuid, dump_ctx.url, rev_ctx.timestamp);
 }
 
 static void svndump_read(uint32_t url)
@@ -282,6 +275,16 @@ static void svndump_read(uint32_t url)
 	if (active_ctx != DUMP_CTX) handle_revision();
 }
 
+static void svndump_init(void)
+{
+	log_init();
+	repo_init();
+	reset_dump_ctx(~0);
+	reset_rev_ctx(0);
+	reset_node_ctx(NULL);
+	init_keys();
+}
+
 static void svndump_reset(void)
 {
 	log_reset();
@@ -294,8 +297,8 @@ static void svndump_reset(void)
 
 int main(int argc, char **argv)
 {
-    init_keys();
-    svndump_read((argc > 1) ? pool_intern(argv[1]) : ~0);
-    svndump_reset();
-    return 0;
+	svndump_init();
+	svndump_read((argc > 1) ? pool_intern(argv[1]) : ~0);
+	svndump_reset();
+	return 0;
 }

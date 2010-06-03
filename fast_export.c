@@ -35,7 +35,7 @@ void fast_export_commit(uint32_t revision, uint32_t author, char *log,
 	} else {
 		*gitsvnline = '\0';
 	}
-	printf("commit refs/heads/master\nmark :%d\n", revision);
+	printf("commit refs/heads/master\n");
 	printf("committer %s <%s@%s> %ld +0000\n",
 		   ~author ? pool_fetch(author) : "nobody",
 		   ~author ? pool_fetch(author) : "nobody",

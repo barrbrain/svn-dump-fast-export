@@ -94,6 +94,16 @@ uint32_t pool_tok_seq(uint32_t max, uint32_t *seq, char *delim, char *str)
 	return length;
 }
 
+void pool_init(void)
+{
+	uint32_t node;
+	node_init();
+	string_init();
+	for (node = 0; node < node_pool.size; node++) {
+		tree_insert(&tree, node_pointer(node));
+	}
+}
+
 void pool_reset(void)
 {
 	node_reset();
