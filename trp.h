@@ -27,18 +27,29 @@ struct trp_root {
 /* Pointer/Offset conversion */
 #define trpn_pointer(a_base, a_offset) (a_base##_pointer(a_offset))
 #define trpn_offset(a_base, a_pointer) (a_base##_offset(a_pointer))
+#define trpn_modify(a_base, a_offset) \
+	do { \
+		if ((a_offset) < a_base##_pool.committed) { \
+			uint32_t old_offset = (a_offset);\
+			(a_offset) = a_base##_alloc(1); \
+			*trpn_pointer(a_base, a_offset) = \
+				*trpn_pointer(a_base, old_offset); \
+		} \
+	} while (0);
 
 /* Left accessors. */
 #define trp_left_get(a_base, a_field, a_node) \
 	(trpn_pointer(a_base, a_node)->a_field.trpn_left)
 #define trp_left_set(a_base, a_field, a_node, a_left) \
-	do { trp_left_get(a_base, a_field, a_node) = (a_left); } while(0)
+	do { trpn_modify(a_base, a_node); \
+	trp_left_get(a_base, a_field, a_node) = (a_left); } while(0)
 
 /* Right accessors. */
 #define trp_right_get(a_base, a_field, a_node) \
 	(trpn_pointer(a_base, a_node)->a_field.trpn_right)
 #define trp_right_set(a_base, a_field, a_node, a_right) \
-	do { trp_right_get(a_base, a_field, a_node) = (a_right); } while(0)
+	do { trpn_modify(a_base, a_node); \
+	trp_right_get(a_base, a_field, a_node) = (a_right); } while(0)
 
 /* Priority accessors. */
 #define KNUTH_GOLDEN_RATIO_32BIT 2654435761u
