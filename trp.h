@@ -51,6 +51,15 @@ struct trp_root {
 	trp_right_set(a_base, a_field, (a_node), ~0)
 
 /* Internal utility macros. */
+#define trpn_first(a_base, a_field, a_root, r_node) \
+	do { \
+		(r_node) = (a_root); \
+		if ((r_node) == ~0) \
+			return NULL; \
+		while (~trp_left_get(a_base, a_field, (r_node))) \
+			(r_node) = trp_left_get(a_base, a_field, (r_node)); \
+	} while (0)
+
 #define trpn_rotate_left(a_base, a_field, a_node, r_node) \
 	do { (r_node) = trp_right_get(a_base, a_field, (a_node)); \
 	trp_right_set(a_base, a_field, (a_node), \
@@ -64,6 +73,36 @@ struct trp_root {
 	trp_right_set(a_base, a_field, (r_node), (a_node)); } while(0)
 
 #define trp_gen(a_attr, a_pre, a_type, a_field, a_base, a_cmp) \
+a_attr a_type *a_pre##first(struct trp_root *treap) \
+{ \
+	uint32_t ret; \
+	trpn_first(a_base, a_field, treap->trp_root, ret); \
+	return trpn_pointer(a_base, ret); \
+} \
+a_attr a_type *a_pre##next(struct trp_root *treap, a_type *node) { \
+	uint32_t ret; \
+	uint32_t offset = trpn_offset(a_base, node); \
+	if (~trp_right_get(a_base, a_field, offset)) { \
+		trpn_first(a_base, a_field, \
+			trp_right_get(a_base, a_field, offset), ret); \
+	} else { \
+		uint32_t tnode = treap->trp_root; \
+		ret = ~0; \
+		while (1) { \
+			int cmp = (a_cmp)(trpn_pointer(a_base, offset), \
+				trpn_pointer(a_base, tnode)); \
+			if (cmp < 0) { \
+				ret = tnode; \
+				tnode = trp_left_get(a_base, a_field, tnode); \
+			} else if (cmp > 0) { \
+				tnode = trp_right_get(a_base, a_field, tnode); \
+			} else { \
+				break; \
+			} \
+		} \
+	} \
+	return trpn_pointer(a_base, ret); \
+} \
 a_attr a_type *a_pre##search(struct trp_root *treap, a_type *key) \
 { \
 	int cmp; \
