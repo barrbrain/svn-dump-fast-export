@@ -108,6 +108,44 @@ a_attr void a_pre##insert(struct trp_root *treap, a_type *node) \
 	uint32_t offset = trpn_offset(a_base, node); \
 	trp_node_new(a_base, a_field, offset); \
 	treap->trp_root = a_pre##insert_recurse( treap->trp_root, offset); \
-}
+} \
+a_attr uint32_t a_pre##remove_recurse(uint32_t cur_node, uint32_t rem_node) \
+{ \
+	int cmp = a_cmp(trpn_pointer(a_base, rem_node), \
+			trpn_pointer(a_base, cur_node)); \
+	if (cmp == 0) { \
+		uint32_t ret; \
+		uint32_t left = trp_left_get(a_base, a_field, cur_node); \
+		uint32_t right = trp_right_get(a_base, a_field, cur_node); \
+		if (left == ~0) { \
+			if (right == ~0) \
+				return (~0); \
+		} else if (right == ~0 || trp_prio_get(left) < trp_prio_get(right)) { \
+			trpn_rotate_right(a_base, a_field, cur_node, ret); \
+			right = a_pre##remove_recurse(cur_node, rem_node); \
+			trp_right_set(a_base, a_field, ret, right); \
+			return (ret); \
+		} \
+		trpn_rotate_left(a_base, a_field, cur_node, ret); \
+		left = a_pre##remove_recurse(cur_node, rem_node); \
+		trp_left_set(a_base, a_field, ret, left); \
+		return (ret); \
+	} else if (cmp < 0) { \
+		uint32_t left = a_pre##remove_recurse( \
+			trp_left_get(a_base, a_field, cur_node), rem_node); \
+		trp_left_set(a_base, a_field, cur_node, left); \
+		return (cur_node); \
+	} else { \
+		uint32_t right = a_pre##remove_recurse( \
+			trp_right_get(a_base, a_field, cur_node), rem_node); \
+		trp_right_set(a_base, a_field, cur_node, right); \
+		return (cur_node); \
+	} \
+} \
+a_attr void a_pre##remove(struct trp_root *treap, a_type *node) \
+{ \
+	treap->trp_root = a_pre##remove_recurse(treap->trp_root, \
+		trpn_offset(a_base, node)); \
+} \
 
 #endif
