@@ -27,20 +27,13 @@ static char *node_value(node_t *node)
 	return node ? string_pointer(node->offset) : NULL;
 }
 
-static int node_value_cmp(node_t *a, node_t *b)
+static int node_cmp(node_t *a, node_t *b)
 {
 	return strcmp(node_value(a), node_value(b));
 }
 
-static int node_indentity_cmp(node_t *a, node_t *b)
-{
-	int r = node_value_cmp(a, b);
-	return r ? r : (((uintptr_t) a) > ((uintptr_t) b))
-		- (((uintptr_t) a) < ((uintptr_t) b));
-}
-
 /* Build a Treap from the node_s structure (a trp_node w/ offset) */
-trp_gen(static, tree_, node_t, children, node, node_indentity_cmp);
+trp_gen(static, tree_, node_t, children, node, node_cmp);
 
 char *pool_fetch(uint32_t entry)
 {
@@ -58,8 +51,8 @@ uint32_t pool_intern(char *key)
 	node_t *node = node_pointer(node_alloc(1));
 	node->offset = string_alloc(key_len);
 	strcpy(node_value(node), key);
-	match = tree_psearch(&tree, node);
-	if (!match || node_value_cmp(node, match)) {
+	match = tree_search(&tree, node);
+	if (!match) {
 		tree_insert(&tree, node);
 	} else {
 		node_free(1);

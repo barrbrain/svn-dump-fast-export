@@ -64,22 +64,15 @@ struct trp_root {
 	trp_right_set(a_base, a_field, (r_node), (a_node)); } while(0)
 
 #define trp_gen(a_attr, a_pre, a_type, a_field, a_base, a_cmp) \
-a_attr a_type *a_pre##psearch(struct trp_root *treap, a_type *key) \
+a_attr a_type *a_pre##search(struct trp_root *treap, a_type *key) \
 { \
-	uint32_t ret = ~0; \
-	uint32_t tnode = treap->trp_root; \
-	while (~tnode) { \
-		int cmp = (a_cmp)(key, trpn_pointer(a_base, tnode)); \
+	int cmp; \
+	uint32_t ret = treap->trp_root; \
+	while (~ret && (cmp = (a_cmp)(key, trpn_pointer(a_base,ret)))) \
 		if (cmp < 0) \
-			tnode = trp_left_get(a_base, a_field, tnode); \
-		else if (cmp > 0) { \
-			ret = tnode; \
-			tnode = trp_right_get(a_base, a_field, tnode); \
-		} else { \
-			ret = tnode; \
-			break; \
-		} \
-	} \
+			ret = trp_left_get(a_base, a_field, ret); \
+		else \
+			ret = trp_right_get(a_base, a_field, ret); \
 	return trpn_pointer(a_base, ret); \
 } \
 a_attr uint32_t a_pre##insert_recurse(uint32_t cur_node, uint32_t ins_node) \
