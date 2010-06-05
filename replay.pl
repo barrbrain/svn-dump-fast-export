@@ -46,20 +46,25 @@ $repos->get_logs([''], 1, $maxrev, 1, 0, sub {
 
   my $root = $fs->revision_root($rev, $pool);
 
-  for my $file (keys %$paths) {
-    my $node = $paths->{$file};
-    my $action = $node->action;
+  my $lastdir;
 
-    if ($action eq 'D') {
-      my $path = substr($file, 1);
-      print $commitlog "D $path\n";
+  for my $file (sort keys %$paths) {
+    if ($lastdir && index($file, $lastdir) == 0) {
+      next;
+    } else {
+      undef $lastdir;
+    }
+
+    my $path = substr($file, 1);
+    print $commitlog "D $path\n";
+
+    if ($SVN::Node::none == $root->check_path($file, $pool)) {
       next;
     }
 
     if ($root->is_dir($file, $pool) ) {
-      my $path = substr($file, 1);
-      print $commitlog "D $path\n";
       modifydir($root, $file, $pool);
+      $lastdir = $file.'/';
     } else {
       modifyfile($root, $file, $pool);
     }
