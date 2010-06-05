@@ -2,6 +2,9 @@
  * Parse and rearrange a svnadmin dump.
  * Create the dump with:
  * svnadmin dump --incremental -r<startrev>:<endrev> <repository> >outfile
+ *
+ * Licensed under a two-clause BSD-style license.
+ * See LICENSE for details.
  */
 
 #define _GNU_SOURCE

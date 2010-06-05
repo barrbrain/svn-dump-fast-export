@@ -1,3 +1,8 @@
+/*
+ * Licensed under a two-clause BSD-style license.
+ * See LICENSE for details.
+ */
+
 #ifndef OBJ_POOL_H_
 #define OBJ_POOL_H_
 

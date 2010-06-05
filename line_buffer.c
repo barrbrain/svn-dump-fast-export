@@ -1,3 +1,8 @@
+/*
+ * Licensed under a two-clause BSD-style license.
+ * See LICENSE for details.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

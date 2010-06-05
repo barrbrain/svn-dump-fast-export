@@ -5,6 +5,9 @@
  *   #include <stdint.h>
  *   #include <trp.h>
  *   trp_gen(...)
+ *
+ * Licensed under a two-clause BSD-style license.
+ * See LICENSE for details.
  */
 
 #ifndef TRP_H_
