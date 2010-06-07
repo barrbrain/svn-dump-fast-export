@@ -30,17 +30,14 @@ static struct { \
 	uint32_t size; \
 	uint32_t capacity; \
 	obj_t *base; \
-        FILE *file; \
+	FILE *file; \
 } pre##_pool = { 0, 0, 0, NULL, NULL}; \
 static void pre##_init(void) \
 { \
 	struct stat st; \
 	size_t ps = sysconf (_SC_PAGESIZE); \
-	/* Touch binary file before opening read/write */ \
-	pre##_pool.file = fopen(#pre ".bin", "a"); \
-	fclose(pre##_pool.file); \
-	/* Open, check size, compute capacity */ \
-	pre##_pool.file = fopen(#pre ".bin", "r+"); \
+	pre##_pool.file = fopen(#pre ".bin", "a+"); \
+	rewind(pre##_pool.file); \
 	fstat(fileno(pre##_pool.file), &st); \
 	pre##_pool.size = st.st_size / sizeof(obj_t); \
 	pre##_pool.capacity = ((st.st_size + ps - 1) & ~(ps - 1)) / sizeof(obj_t); \
