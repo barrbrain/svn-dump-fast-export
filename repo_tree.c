@@ -110,7 +110,7 @@ static void
 repo_write_dirent(uint32_t *path, uint32_t mode, uint32_t content_offset,
                   uint32_t del)
 {
-	uint32_t name, revision, dirent_o = ~0, dir_o = ~0, parent_dir_o = ~0;
+	uint32_t name, revision, dir_o = ~0, parent_dir_o = ~0;
 	struct repo_dir *dir;
 	struct repo_dirent *key;
 	struct repo_dirent *dirent = NULL;
@@ -226,7 +226,7 @@ static void repo_git_add_r(uint32_t depth, uint32_t *path, struct repo_dir *dir)
 }
 
 static void repo_diff_r(uint32_t depth, uint32_t *path, struct repo_dir *dir1,
-			struct repo_dir *dir2)
+                        struct repo_dir *dir2)
 {
 	struct repo_dirent *de1, *de2;
 	de1 = repo_first_dirent(dir1);
@@ -246,11 +246,11 @@ static void repo_diff_r(uint32_t depth, uint32_t *path, struct repo_dir *dir1,
 		}
 		path[depth] = de1->name_offset;
 		if (de1->mode != de2->mode ||
-			de1->content_offset != de2->content_offset) {
+		    de1->content_offset != de2->content_offset) {
 			if (repo_dirent_is_dir(de1) && repo_dirent_is_dir(de2)) {
 				repo_diff_r(depth + 1, path,
-							repo_dir_from_dirent(de1),
-							repo_dir_from_dirent(de2));
+				            repo_dir_from_dirent(de1),
+				            repo_dir_from_dirent(de2));
 			} else {
 				if (repo_dirent_is_dir(de1) != repo_dirent_is_dir(de2)) {
 					fast_export_delete(depth + 1, path);
@@ -278,9 +278,9 @@ static uint32_t path_stack[REPO_MAX_PATH_DEPTH];
 void repo_diff(uint32_t r1, uint32_t r2)
 {
 	repo_diff_r(0,
-		    path_stack,
-		    repo_commit_root_dir(commit_pointer(r1)),
-		    repo_commit_root_dir(commit_pointer(r2)));
+	            path_stack,
+	            repo_commit_root_dir(commit_pointer(r1)),
+	            repo_commit_root_dir(commit_pointer(r2)));
 }
 
 void repo_commit(uint32_t revision, uint32_t author, char *log, uint32_t uuid,
@@ -300,7 +300,7 @@ static void mark_init(void)
 	_mark = 0;
 	for (i = 0; i < dirent_pool.size; i++)
 		if (!repo_dirent_is_dir(dirent_pointer(i)) &&
-			dirent_pointer(i)->content_offset > _mark)
+		    dirent_pointer(i)->content_offset > _mark)
 			_mark = dirent_pointer(i)->content_offset;
 	_mark++;
 }
