@@ -24,7 +24,6 @@ struct repo_dir {
 };
 
 struct repo_commit {
-	uint32_t mark;
 	uint32_t root_dir_offset;
 };
 
@@ -287,8 +286,10 @@ void repo_commit(uint32_t revision, uint32_t author, char *log, uint32_t uuid,
                  uint32_t url, time_t timestamp)
 {
 	fast_export_commit(revision, author, log, uuid, url, timestamp);
-	dir_pool.committed = dir_pool.size;
-	dirent_pool.committed = dirent_pool.size;
+	pool_commit();
+	dirent_commit();
+	dir_commit();
+	commit_commit();
 	active_commit = commit_alloc(1);
 	commit_pointer(active_commit)->root_dir_offset =
 		commit_pointer(active_commit - 1)->root_dir_offset;
@@ -311,21 +312,18 @@ void repo_init() {
 	dir_init();
 	dirent_init();
 	mark_init();
-	dir_pool.committed = dir_pool.size;
-	dirent_pool.committed = dirent_pool.size;
-	active_commit = commit_pool.size - 1;
-	if (active_commit == -1) {
-		commit_alloc(2);
+	if (commit_pool.size == 0) {
 		/* Create empty tree for commit 0. */
+		commit_alloc(1);
 		commit_pointer(0)->root_dir_offset = dir_alloc(1);
 		dir_pointer(0)->entries.trp_root = ~0;
-		/* Preallocate commit 1, ready for changes. */
-		commit_pointer(1)->root_dir_offset =
-			commit_pointer(0)->root_dir_offset;
-		active_commit = 1;
-		dir_pool.committed = dir_pool.size;
-		dirent_pool.committed = dirent_pool.size;
+		dir_commit();
+		commit_commit();
 	}
+	/* Preallocate next commit, ready for changes. */
+	active_commit = commit_alloc(1);
+	commit_pointer(active_commit)->root_dir_offset =
+		commit_pointer(active_commit - 1)->root_dir_offset;
 }
 
 void repo_reset(void)

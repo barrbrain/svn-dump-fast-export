@@ -95,11 +95,19 @@ uint32_t pool_tok_seq(uint32_t max, uint32_t *seq, char *delim, char *str)
 void pool_init(void)
 {
 	uint32_t node;
-	node_init();
+	uint32_t string = 0;
 	string_init();
-	for (node = 0; node < node_pool.size; node++) {
+	while (string < string_pool.size) {
+		node = node_alloc(1);
+		node_pointer(node)->offset = string;
 		tree_insert(&tree, node_pointer(node));
+		string += strlen(string_pointer(string)) + 1;
 	}
+}
+
+void pool_commit(void)
+{
+	string_commit();
 }
 
 void pool_reset(void)

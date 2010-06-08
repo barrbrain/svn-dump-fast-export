@@ -282,7 +282,6 @@ static void svndump_read(uint32_t url)
 
 static void svndump_init(void)
 {
-	log_init();
 	repo_init();
 	reset_dump_ctx(~0);
 	reset_rev_ctx(0);

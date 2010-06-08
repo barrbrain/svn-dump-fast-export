@@ -8,10 +8,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
-#include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/mman.h>
-#include <unistd.h>
 
 /*
  * The obj_pool_gen() macro generates a type-specific memory pool
@@ -35,41 +32,28 @@ static struct { \
 static void pre##_init(void) \
 { \
 	struct stat st; \
-	size_t ps = sysconf (_SC_PAGESIZE); \
 	pre##_pool.file = fopen(#pre ".bin", "a+"); \
 	rewind(pre##_pool.file); \
 	fstat(fileno(pre##_pool.file), &st); \
 	pre##_pool.size = st.st_size / sizeof(obj_t); \
-	pre##_pool.capacity = ((st.st_size + ps - 1) & ~(ps - 1)) / sizeof(obj_t); \
+	pre##_pool.committed = pre##_pool.size; \
+	pre##_pool.capacity = pre##_pool.size * 2; \
 	if (pre##_pool.capacity < initial_capacity) \
 		pre##_pool.capacity = initial_capacity; \
-	/* Truncate to calculated capacity and map to VM */ \
-	ftruncate(fileno(pre##_pool.file), pre##_pool.capacity * sizeof(obj_t)); \
-	pre##_pool.base = mmap(0, pre##_pool.capacity * sizeof(obj_t), \
-				PROT_READ | PROT_WRITE, MAP_SHARED, \
-				fileno(pre##_pool.file), 0); \
+	pre##_pool.base = malloc(pre##_pool.capacity * sizeof(obj_t)); \
+	fread(pre##_pool.base, sizeof(obj_t), pre##_pool.size, pre##_pool.file); \
 } \
 static uint32_t pre##_alloc(uint32_t count) \
 { \
 	uint32_t offset; \
 	if (pre##_pool.size + count > pre##_pool.capacity) { \
-		if (NULL == pre##_pool.base) \
-			pre##_init(); \
-		fsync(fileno(pre##_pool.file)); \
-		munmap(pre##_pool.base, \
-			pre##_pool.capacity * sizeof(obj_t)); \
-		pre##_pool.base = NULL; \
 		while (pre##_pool.size + count > pre##_pool.capacity) \
 			if (pre##_pool.capacity) \
 				pre##_pool.capacity *= 2; \
 			else \
 				pre##_pool.capacity = initial_capacity; \
-		ftruncate(fileno(pre##_pool.file), \
-				pre##_pool.capacity * sizeof(obj_t)); \
-		pre##_pool.base = \
-			mmap(0, pre##_pool.capacity * sizeof(obj_t), \
-				PROT_READ | PROT_WRITE, MAP_SHARED, \
-				fileno(pre##_pool.file), 0); \
+		pre##_pool.base = realloc(pre##_pool.base, \
+					pre##_pool.capacity * sizeof(obj_t)); \
 	} \
 	offset = pre##_pool.size; \
 	pre##_pool.size += count; \
@@ -87,14 +71,16 @@ static obj_t *pre##_pointer(uint32_t offset) \
 { \
 	return offset >= pre##_pool.size ? NULL : &pre##_pool.base[offset]; \
 } \
+static void pre##_commit(void) \
+{ \
+	pre##_pool.committed += fwrite(pre##_pool.base + pre##_pool.committed, \
+		sizeof(obj_t), pre##_pool.size - pre##_pool.committed, \
+		pre##_pool.file); \
+} \
 static void pre##_reset(void) \
 { \
 	if (pre##_pool.base) { \
-		fsync(fileno(pre##_pool.file)); \
-		munmap(pre##_pool.base, \
-			pre##_pool.capacity * sizeof(obj_t)); \
-		ftruncate(fileno(pre##_pool.file), \
-				pre##_pool.size * sizeof(obj_t)); \
+		free(pre##_pool.base); \
 		fclose(pre##_pool.file); \
 	} \
 	pre##_pool.base = NULL; \
