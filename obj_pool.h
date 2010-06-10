@@ -81,6 +81,8 @@ static void pre##_reset(void) \
 { \
 	if (pre##_pool.base) { \
 		free(pre##_pool.base); \
+	} \
+	if (pre##_pool.file) { \
 		fclose(pre##_pool.file); \
 	} \
 	pre##_pool.base = NULL; \
