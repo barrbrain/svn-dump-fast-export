@@ -6,6 +6,12 @@
 #ifndef OBJ_POOL_H_
 #define OBJ_POOL_H_
 
+#ifdef __GNUC__
+#define MAYBE_UNUSED __attribute__((__unused__))
+#else
+#define MAYBE_UNUSED __attribute__(x)
+#endif
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <sys/stat.h>
@@ -29,7 +35,7 @@ static struct { \
 	obj_t *base; \
 	FILE *file; \
 } pre##_pool = { 0, 0, 0, NULL, NULL}; \
-static void pre##_init(void) \
+static MAYBE_UNUSED void pre##_init(void) \
 { \
 	struct stat st; \
 	pre##_pool.file = fopen(#pre ".bin", "a+"); \
@@ -43,7 +49,7 @@ static void pre##_init(void) \
 	pre##_pool.base = malloc(pre##_pool.capacity * sizeof(obj_t)); \
 	fread(pre##_pool.base, sizeof(obj_t), pre##_pool.size, pre##_pool.file); \
 } \
-static uint32_t pre##_alloc(uint32_t count) \
+static MAYBE_UNUSED uint32_t pre##_alloc(uint32_t count) \
 { \
 	uint32_t offset; \
 	if (pre##_pool.size + count > pre##_pool.capacity) { \
@@ -59,25 +65,25 @@ static uint32_t pre##_alloc(uint32_t count) \
 	pre##_pool.size += count; \
 	return offset; \
 } \
-static void pre##_free(uint32_t count) \
+static MAYBE_UNUSED void pre##_free(uint32_t count) \
 { \
 	pre##_pool.size -= count; \
 } \
-static uint32_t pre##_offset(obj_t *obj) \
+static MAYBE_UNUSED uint32_t pre##_offset(obj_t *obj) \
 { \
 	return obj == NULL ? ~0 : obj - pre##_pool.base; \
 } \
-static obj_t *pre##_pointer(uint32_t offset) \
+static MAYBE_UNUSED obj_t *pre##_pointer(uint32_t offset) \
 { \
 	return offset >= pre##_pool.size ? NULL : &pre##_pool.base[offset]; \
 } \
-static void pre##_commit(void) \
+static MAYBE_UNUSED void pre##_commit(void) \
 { \
 	pre##_pool.committed += fwrite(pre##_pool.base + pre##_pool.committed, \
 		sizeof(obj_t), pre##_pool.size - pre##_pool.committed, \
 		pre##_pool.file); \
 } \
-static void pre##_reset(void) \
+static MAYBE_UNUSED void pre##_reset(void) \
 { \
 	if (pre##_pool.base) { \
 		free(pre##_pool.base); \

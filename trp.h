@@ -13,6 +13,12 @@
 #ifndef TRP_H_
 #define TRP_H_
 
+#ifdef __GNUC__
+#define MAYBE_UNUSED __attribute__((__unused__))
+#else
+#define MAYBE_UNUSED __attribute__(x)
+#endif
+
 /* Node structure. */
 struct trp_node {
 	uint32_t trpn_left;
@@ -84,13 +90,13 @@ struct trp_root {
 	trp_right_set(a_base, a_field, (r_node), (a_node)); } while(0)
 
 #define trp_gen(a_attr, a_pre, a_type, a_field, a_base, a_cmp) \
-a_attr a_type *a_pre##first(struct trp_root *treap) \
+a_attr a_type MAYBE_UNUSED *a_pre##first(struct trp_root *treap) \
 { \
 	uint32_t ret; \
 	trpn_first(a_base, a_field, treap->trp_root, ret); \
 	return trpn_pointer(a_base, ret); \
 } \
-a_attr a_type *a_pre##next(struct trp_root *treap, a_type *node) { \
+a_attr a_type MAYBE_UNUSED *a_pre##next(struct trp_root *treap, a_type *node) { \
 	uint32_t ret; \
 	uint32_t offset = trpn_offset(a_base, node); \
 	if (~trp_right_get(a_base, a_field, offset)) { \
@@ -114,7 +120,7 @@ a_attr a_type *a_pre##next(struct trp_root *treap, a_type *node) { \
 	} \
 	return trpn_pointer(a_base, ret); \
 } \
-a_attr a_type *a_pre##search(struct trp_root *treap, a_type *key) \
+a_attr a_type MAYBE_UNUSED *a_pre##search(struct trp_root *treap, a_type *key) \
 { \
 	int cmp; \
 	uint32_t ret = treap->trp_root; \
@@ -125,7 +131,7 @@ a_attr a_type *a_pre##search(struct trp_root *treap, a_type *key) \
 			ret = trp_right_get(a_base, a_field, ret); \
 	return trpn_pointer(a_base, ret); \
 } \
-a_attr uint32_t a_pre##insert_recurse(uint32_t cur_node, uint32_t ins_node) \
+a_attr uint32_t MAYBE_UNUSED a_pre##insert_recurse(uint32_t cur_node, uint32_t ins_node) \
 { \
 	if (cur_node == ~0) \
 		return (ins_node); \
@@ -153,13 +159,13 @@ a_attr uint32_t a_pre##insert_recurse(uint32_t cur_node, uint32_t ins_node) \
 		return (ret); \
 	} \
 } \
-a_attr void a_pre##insert(struct trp_root *treap, a_type *node) \
+a_attr void MAYBE_UNUSED a_pre##insert(struct trp_root *treap, a_type *node) \
 { \
 	uint32_t offset = trpn_offset(a_base, node); \
 	trp_node_new(a_base, a_field, offset); \
 	treap->trp_root = a_pre##insert_recurse( treap->trp_root, offset); \
 } \
-a_attr uint32_t a_pre##remove_recurse(uint32_t cur_node, uint32_t rem_node) \
+a_attr uint32_t MAYBE_UNUSED a_pre##remove_recurse(uint32_t cur_node, uint32_t rem_node) \
 { \
 	int cmp = a_cmp(trpn_pointer(a_base, rem_node), \
 			trpn_pointer(a_base, cur_node)); \
@@ -192,7 +198,7 @@ a_attr uint32_t a_pre##remove_recurse(uint32_t cur_node, uint32_t rem_node) \
 		return (cur_node); \
 	} \
 } \
-a_attr void a_pre##remove(struct trp_root *treap, a_type *node) \
+a_attr void MAYBE_UNUSED a_pre##remove(struct trp_root *treap, a_type *node) \
 { \
 	treap->trp_root = a_pre##remove_recurse(treap->trp_root, \
 		trpn_offset(a_base, node)); \
