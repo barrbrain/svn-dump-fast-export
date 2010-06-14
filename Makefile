@@ -1,10 +1,10 @@
 .PHONY: default clean
 default: svn-fe-dbg
-%.o: %.c
-	$(CC) -c *.c -I.
-svn-fe: *.o
-	$(CC) *.o -o svn-fe -O2
+%.o: %.c *.h
+	$(CC) -c *.c -I. -Wall -Werror -O0 -ggdb3
+svn-fe: *.c *.h
+	$(CC) *.c -o $@ -O2
 svn-fe-dbg: *.o
-	$(CC) *.c -o svn-fe-dbg -O1 -Wall -ggdb
+	$(CC) *.o -o $@
 clean:
 	$(RM) *.o svn-fe svn-fe-dbg
