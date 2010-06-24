@@ -27,18 +27,18 @@ struct repo_commit {
 	uint32_t root_dir_offset;
 };
 
-/* Generate memory pools for commit, dir and dirent */
+/* Memory pools for commit, dir and dirent */
 obj_pool_gen(commit, struct repo_commit, 4096);
 obj_pool_gen(dir, struct repo_dir, 4096);
 obj_pool_gen(dirent, struct repo_dirent, 4096);
 
-static int repo_dirent_name_cmp(const void *a, const void *b);
-
-/* Build a Treap from the node_s structure (a trp_node w/ offset) */
-trp_gen(static, dirent_, struct repo_dirent, children, dirent, repo_dirent_name_cmp);
-
 static uint32_t active_commit;
 static uint32_t _mark;
+
+static int repo_dirent_name_cmp(const void *a, const void *b);
+
+/* Treap for directory entries */
+trp_gen(static, dirent_, struct repo_dirent, children, dirent, repo_dirent_name_cmp);
 
 uint32_t next_blob_mark(void)
 {
