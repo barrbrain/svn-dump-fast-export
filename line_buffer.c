@@ -18,13 +18,27 @@ obj_pool_gen(blob, char, 4096);
 
 static char line_buffer[LINE_BUFFER_LEN];
 static char byte_buffer[COPY_BUFFER_LEN];
+static FILE *infile;
+
+int buffer_init(const char *filename)
+{
+	infile = filename ? fopen(filename, "r") : stdin;
+	if (!infile)
+		return -1;
+	return 0;
+}
+
+int buffer_deinit()
+{
+	fclose(infile);
+	return 0;
+}
 
 /* Read a line without trailing newline. */
 char *buffer_read_line(void)
 {
 	char *end;
-
-	if (!fgets(line_buffer, sizeof(line_buffer), stdin))
+	if (!fgets(line_buffer, sizeof(line_buffer), infile))
 		/* Error or data exhausted. */
 		return NULL;
 	end = line_buffer + strlen(line_buffer);
@@ -39,7 +53,6 @@ char *buffer_read_line(void)
 		 * but for now let's return an error.
 		 */
 		return NULL;
-
 	return line_buffer;
 }
 
@@ -48,19 +61,19 @@ char *buffer_read_string(uint32_t len)
 	char *s;
 	blob_free(blob_pool.size);
 	s = blob_pointer(blob_alloc(len + 1));
-	s[fread(s, 1, len, stdin)] = '\0';
-	return ferror(stdin) ? NULL : s;
+	s[fread(s, 1, len, infile)] = '\0';
+	return ferror(infile) ? NULL : s;
 }
 
 void buffer_copy_bytes(uint32_t len)
 {
 	uint32_t in;
-	while (len > 0 && !feof(stdin)) {
+	while (len > 0 && !feof(infile)) {
 		in = len < COPY_BUFFER_LEN ? len : COPY_BUFFER_LEN;
-		in = fread(byte_buffer, 1, in, stdin);
+		in = fread(byte_buffer, 1, in, infile);
 		len -= in;
 		fwrite(byte_buffer, 1, in, stdout);
-		if (ferror(stdin) || ferror(stdout))
+		if (ferror(infile) || ferror(stdout))
 			break;
 	}
 }
@@ -68,9 +81,9 @@ void buffer_copy_bytes(uint32_t len)
 void buffer_skip_bytes(uint32_t len)
 {
 	uint32_t in;
-	while (len > 0 && !feof(stdin) && !ferror(stdin)) {
+	while (len > 0 && !feof(infile) && !ferror(infile)) {
 		in = len < COPY_BUFFER_LEN ? len : COPY_BUFFER_LEN;
-		in = fread(byte_buffer, 1, in, stdin);
+		in = fread(byte_buffer, 1, in, infile);
 		len -= in;
 	}
 }
