@@ -1,5 +1,5 @@
 #ifndef STRING_POOL_H_
-#define	STRING_POOL_H_
+#define STRING_POOL_H_
 
 #include <stdint.h>
 #include <stdio.h>
