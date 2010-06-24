@@ -33,7 +33,7 @@ obj_pool_gen(dir, struct repo_dir, 4096);
 obj_pool_gen(dirent, struct repo_dirent, 4096);
 
 static uint32_t active_commit;
-static uint32_t _mark;
+static uint32_t mark;
 
 static int repo_dirent_name_cmp(const void *a, const void *b);
 
@@ -42,7 +42,7 @@ trp_gen(static, dirent_, struct repo_dirent, children, dirent, repo_dirent_name_
 
 uint32_t next_blob_mark(void)
 {
-	return _mark++;
+	return mark++;
 }
 
 static struct repo_dir *repo_commit_root_dir(struct repo_commit *commit)
@@ -298,12 +298,12 @@ void repo_commit(uint32_t revision, uint32_t author, char *log, uint32_t uuid,
 static void mark_init(void)
 {
 	uint32_t i;
-	_mark = 0;
+	mark = 0;
 	for (i = 0; i < dirent_pool.size; i++)
 		if (!repo_dirent_is_dir(dirent_pointer(i)) &&
-		    dirent_pointer(i)->content_offset > _mark)
-			_mark = dirent_pointer(i)->content_offset;
-	_mark++;
+		    dirent_pointer(i)->content_offset > mark)
+			mark = dirent_pointer(i)->content_offset;
+	mark++;
 }
 
 void repo_init() {
