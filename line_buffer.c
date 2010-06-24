@@ -60,6 +60,8 @@ void buffer_copy_bytes(uint32_t len)
 		in = fread(byte_buffer, 1, in, stdin);
 		len -= in;
 		fwrite(byte_buffer, 1, in, stdout);
+		if (ferror(stdin) || ferror(stdout))
+			break;
 	}
 }
 
