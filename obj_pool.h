@@ -85,12 +85,9 @@ static MAYBE_UNUSED void pre##_commit(void) \
 } \
 static MAYBE_UNUSED void pre##_reset(void) \
 { \
-	if (pre##_pool.base) { \
-		free(pre##_pool.base); \
-	} \
-	if (pre##_pool.file) { \
+	free(pre##_pool.base); \
+	if (pre##_pool.file) \
 		fclose(pre##_pool.file); \
-	} \
 	pre##_pool.base = NULL; \
 	pre##_pool.size = 0; \
 	pre##_pool.capacity = 0; \
