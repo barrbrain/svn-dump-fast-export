@@ -10,30 +10,29 @@
 #include "obj_pool.h"
 #include "string_pool.h"
 
-typedef struct node_s node_t;
 static struct trp_root tree = { ~0 };
 
-struct node_s {
+struct node {
 	uint32_t offset;
 	struct trp_node children;
 };
 
-/* Create two memory pools: one for node_t, and another for strings */
-obj_pool_gen(node, node_t, 4096);
+/* Two memory pools: one for struct node, and another for strings */
+obj_pool_gen(node, struct node, 4096);
 obj_pool_gen(string, char, 4096);
 
-static char *node_value(node_t *node)
+static char *node_value(struct node *node)
 {
 	return node ? string_pointer(node->offset) : NULL;
 }
 
-static int node_cmp(node_t *a, node_t *b)
+static int node_cmp(struct node *a, struct node *b)
 {
 	return strcmp(node_value(a), node_value(b));
 }
 
-/* Build a Treap from the node_s structure (a trp_node w/ offset) */
-trp_gen(static, tree_, node_t, children, node, node_cmp);
+/* Build a Treap from the node structure (a trp_node w/ offset) */
+trp_gen(static, tree_, struct node, children, node, node_cmp);
 
 char *pool_fetch(uint32_t entry)
 {
@@ -43,12 +42,12 @@ char *pool_fetch(uint32_t entry)
 uint32_t pool_intern(char *key)
 {
 	/* Canonicalize key */
-	node_t *match = NULL;
+	struct node *match = NULL;
 	uint32_t key_len;
 	if (key == NULL)
 		return ~0;
 	key_len = strlen(key) + 1;
-	node_t *node = node_pointer(node_alloc(1));
+	struct node *node = node_pointer(node_alloc(1));
 	node->offset = string_alloc(key_len);
 	strcpy(node_value(node), key);
 	match = tree_search(&tree, node);
