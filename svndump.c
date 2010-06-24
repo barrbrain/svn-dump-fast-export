@@ -149,53 +149,44 @@ static void read_props(void)
 
 static void handle_node(void)
 {
-	if (node_ctx.propLength != LENGTH_UNKNOWN && node_ctx.propLength) {
+	if (node_ctx.propLength != LENGTH_UNKNOWN && node_ctx.propLength)
 		read_props();
-	}
 
-	if (node_ctx.srcRev) {
+	if (node_ctx.srcRev)
 		node_ctx.srcMode = repo_copy(node_ctx.srcRev, node_ctx.src, node_ctx.dst);
-	}
 
 	if (node_ctx.textLength != LENGTH_UNKNOWN &&
-		node_ctx.type != REPO_MODE_DIR) {
+	    node_ctx.type != REPO_MODE_DIR)
 		node_ctx.mark = next_blob_mark();
-	}
 
 	if (node_ctx.action == NODEACT_DELETE) {
 		repo_delete(node_ctx.dst);
 	} else if (node_ctx.action == NODEACT_CHANGE ||
 			   node_ctx.action == NODEACT_REPLACE) {
 		if (node_ctx.action == NODEACT_REPLACE &&
-			node_ctx.type == REPO_MODE_DIR) {
+		    node_ctx.type == REPO_MODE_DIR)
 			repo_replace(node_ctx.dst, node_ctx.mark);
-		} else if (node_ctx.propLength != LENGTH_UNKNOWN ) {
+		else if (node_ctx.propLength != LENGTH_UNKNOWN)
 			repo_modify(node_ctx.dst, node_ctx.type, node_ctx.mark);
-		} else if (node_ctx.textLength != LENGTH_UNKNOWN) {
+		else if (node_ctx.textLength != LENGTH_UNKNOWN)
 			node_ctx.srcMode = repo_replace(node_ctx.dst, node_ctx.mark);
-		}
 	} else if (node_ctx.action == NODEACT_ADD) {
-		if (node_ctx.srcRev &&
-			node_ctx.propLength != LENGTH_UNKNOWN) {
+		if (node_ctx.srcRev && node_ctx.propLength != LENGTH_UNKNOWN)
 			repo_modify(node_ctx.dst, node_ctx.type, node_ctx.mark);
-		} else if (node_ctx.srcRev &&
-			node_ctx.textLength != LENGTH_UNKNOWN) {
+		else if (node_ctx.srcRev && node_ctx.textLength != LENGTH_UNKNOWN)
 			node_ctx.srcMode = repo_replace(node_ctx.dst, node_ctx.mark);
-		} else if ((node_ctx.type == REPO_MODE_DIR && !node_ctx.srcRev) ||
-				   node_ctx.textLength != LENGTH_UNKNOWN){
+		else if ((node_ctx.type == REPO_MODE_DIR && !node_ctx.srcRev) ||
+		         node_ctx.textLength != LENGTH_UNKNOWN)
 			repo_add(node_ctx.dst, node_ctx.type, node_ctx.mark);
-		}
 	}
 
-	if (node_ctx.propLength == LENGTH_UNKNOWN && node_ctx.srcMode) {
+	if (node_ctx.propLength == LENGTH_UNKNOWN && node_ctx.srcMode)
 		node_ctx.type = node_ctx.srcMode;
-	}
 
-	if (node_ctx.mark) {
+	if (node_ctx.mark)
 		fast_export_blob(node_ctx.type, node_ctx.mark, node_ctx.textLength);
-	} else if (node_ctx.textLength != LENGTH_UNKNOWN) {
+	else if (node_ctx.textLength != LENGTH_UNKNOWN)
 		buffer_skip_bytes(node_ctx.textLength);
-	}
 }
 
 static void handle_revision(void)
@@ -216,16 +207,19 @@ static void svndump_read(uint32_t url)
 	reset_dump_ctx(url);
 	while ((t = buffer_read_line())) {
 		val = strstr(t, ": ");
-		if (!val) continue;
+		if (!val)
+			continue;
 		*val++ = '\0';
 		*val++ = '\0';
 		key = pool_intern(t);
 
-		if(key == keys.uuid) {
+		if (key == keys.uuid) {
 			dump_ctx.uuid = pool_intern(val);
 		} else if (key == keys.revision_number) {
-			if (active_ctx == NODE_CTX) handle_node();
-			if (active_ctx != DUMP_CTX) handle_revision();
+			if (active_ctx == NODE_CTX)
+				handle_node();
+			if (active_ctx != DUMP_CTX)
+				handle_revision();
 			active_ctx = REV_CTX;
 			reset_rev_ctx(atoi(val));
 		} else if (key == keys.node_path) {
@@ -234,13 +228,12 @@ static void svndump_read(uint32_t url)
 			active_ctx = NODE_CTX;
 			reset_node_ctx(val);
 		} else if (key == keys.node_kind) {
-			if (!strcmp(val, "dir")) {
+			if (!strcmp(val, "dir"))
 				node_ctx.type = REPO_MODE_DIR;
-			} else if (!strcmp(val, "file")) {
+			else if (!strcmp(val, "file"))
 				node_ctx.type = REPO_MODE_BLB;
-			} else {
+			else
 				fprintf(stderr, "Unknown node-kind: %s\n", val);
-			}
 		} else if (key == keys.node_action) {
 			if (!strcmp(val, "delete")) {
 				node_ctx.action = NODEACT_DELETE;
@@ -276,8 +269,10 @@ static void svndump_read(uint32_t url)
 			}
 		}
 	}
-	if (active_ctx == NODE_CTX) handle_node();
-	if (active_ctx != DUMP_CTX) handle_revision();
+	if (active_ctx == NODE_CTX)
+		handle_node();
+	if (active_ctx != DUMP_CTX)
+		handle_revision();
 }
 
 static void svndump_init(void)
