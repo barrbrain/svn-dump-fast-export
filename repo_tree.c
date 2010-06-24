@@ -235,25 +235,27 @@ static void repo_diff_r(uint32_t depth, uint32_t *path, struct repo_dir *dir1,
 			fast_export_delete(depth + 1, path);
 			de1 = dirent_next(&dir1->entries, de1);
 			continue;
-		} else if (de1->name_offset > de2->name_offset) {
+		}
+		if (de1->name_offset > de2->name_offset) {
 			path[depth] = de2->name_offset;
 			repo_git_add(depth + 1, path, de2);
 			de2 = dirent_next(&dir2->entries, de2);
 			continue;
 		}
 		path[depth] = de1->name_offset;
-		if (de1->mode != de2->mode ||
-		    de1->content_offset != de2->content_offset) {
-			if (repo_dirent_is_dir(de1) && repo_dirent_is_dir(de2)) {
-				repo_diff_r(depth + 1, path,
-				            repo_dir_from_dirent(de1),
-				            repo_dir_from_dirent(de2));
-			} else {
-				if (repo_dirent_is_dir(de1) != repo_dirent_is_dir(de2)) {
-					fast_export_delete(depth + 1, path);
-				}
-				repo_git_add(depth + 1, path, de2);
-			}
+
+		if (de1->mode == de2->mode &&
+		    de1->content_offset == de2->content_offset) {
+			; /* No change. */
+		} else if (repo_dirent_is_dir(de1) && repo_dirent_is_dir(de2)) {
+			repo_diff_r(depth + 1, path,
+				    repo_dir_from_dirent(de1),
+				    repo_dir_from_dirent(de2));
+		} else if (!repo_dirent_is_dir(de1) && !repo_dirent_is_dir(de2)) {
+			repo_git_add(depth + 1, path, de2);
+		} else {
+			fast_export_delete(depth + 1, path);
+			repo_git_add(depth + 1, path, de2);
 		}
 		de1 = dirent_next(&dir1->entries, de1);
 		de2 = dirent_next(&dir2->entries, de2);
