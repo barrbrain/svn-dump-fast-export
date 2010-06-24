@@ -16,17 +16,6 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 
-/*
- * The obj_pool_gen() macro generates a type-specific memory pool
- * implementation.
- *
- * Arguments:
- *
- *   pre              : Prefix for generated functions (ex: string_).
- *   obj_t            : Type for treap data structure (ex: char).
- *   intial_capacity  : The initial size of the memory pool (ex: 4096).
- *
- */
 #define obj_pool_gen(pre, obj_t, initial_capacity) \
 static struct { \
 	uint32_t committed; \
