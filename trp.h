@@ -1,9 +1,9 @@
 /*
- * cpp macro implementation of treaps.
+ * C macro implementation of treaps.
  *
  * Usage:
  *   #include <stdint.h>
- *   #include <trp.h>
+ *   #include "trp.h"
  *   trp_gen(...)
  *
  * Licensed under a two-clause BSD-style license.
@@ -30,7 +30,7 @@ struct trp_root {
 	uint32_t trp_root;
 };
 
-/* Pointer/Offset conversion */
+/* Pointer/Offset conversion. */
 #define trpn_pointer(a_base, a_offset) (a_base##_pointer(a_offset))
 #define trpn_offset(a_base, a_pointer) (a_base##_offset(a_pointer))
 #define trpn_modify(a_base, a_offset) \
@@ -47,25 +47,36 @@ struct trp_root {
 #define trp_left_get(a_base, a_field, a_node) \
 	(trpn_pointer(a_base, a_node)->a_field.trpn_left)
 #define trp_left_set(a_base, a_field, a_node, a_left) \
-	do { trpn_modify(a_base, a_node); \
-	trp_left_get(a_base, a_field, a_node) = (a_left); } while(0)
+	do { \
+		trpn_modify(a_base, a_node); \
+		trp_left_get(a_base, a_field, a_node) = (a_left); \
+	} while(0)
 
 /* Right accessors. */
 #define trp_right_get(a_base, a_field, a_node) \
 	(trpn_pointer(a_base, a_node)->a_field.trpn_right)
 #define trp_right_set(a_base, a_field, a_node, a_right) \
-	do { trpn_modify(a_base, a_node); \
-	trp_right_get(a_base, a_field, a_node) = (a_right); } while(0)
+	do { \
+		trpn_modify(a_base, a_node); \
+		trp_right_get(a_base, a_field, a_node) = (a_right); \
+	} while(0)
+
+/*
+ * Fibonacci hash function.
+ * The multiplier is the nearest prime to (2^32 times (√5 - 1)/2).
+ * See Knuth §6.4: volume 3, 3rd ed, p518.
+ */
+#define trpn_hash(a_node) (uint32_t) (2654435761u * (a_node))
 
 /* Priority accessors. */
-#define KNUTH_GOLDEN_RATIO_32BIT 2654435761u
-#define trp_prio_get(a_node) \
-	(KNUTH_GOLDEN_RATIO_32BIT*(a_node))
+#define trp_prio_get(a_node) trpn_hash(a_node)
 
 /* Node initializer. */
 #define trp_node_new(a_base, a_field, a_node) \
-	trp_left_set(a_base, a_field, (a_node), ~0); \
-	trp_right_set(a_base, a_field, (a_node), ~0)
+	do { \
+		trp_left_set(a_base, a_field, (a_node), ~0); \
+		trp_right_set(a_base, a_field, (a_node), ~0); \
+	} while(0)
 
 /* Internal utility macros. */
 #define trpn_first(a_base, a_field, a_root, r_node) \
@@ -78,16 +89,20 @@ struct trp_root {
 	} while (0)
 
 #define trpn_rotate_left(a_base, a_field, a_node, r_node) \
-	do { (r_node) = trp_right_get(a_base, a_field, (a_node)); \
-	trp_right_set(a_base, a_field, (a_node), \
-		trp_left_get(a_base, a_field, (r_node))); \
-	trp_left_set(a_base, a_field, (r_node), (a_node)); } while(0)
+	do { \
+		(r_node) = trp_right_get(a_base, a_field, (a_node)); \
+		trp_right_set(a_base, a_field, (a_node), \
+			trp_left_get(a_base, a_field, (r_node))); \
+		trp_left_set(a_base, a_field, (r_node), (a_node)); \
+	} while(0)
 
 #define trpn_rotate_right(a_base, a_field, a_node, r_node) \
-	do { (r_node) = trp_left_get(a_base, a_field, (a_node)); \
-	trp_left_set(a_base, a_field, (a_node), \
-		trp_right_get(a_base, a_field, (r_node))); \
-	trp_right_set(a_base, a_field, (r_node), (a_node)); } while(0)
+	do { \
+		(r_node) = trp_left_get(a_base, a_field, (a_node)); \
+		trp_left_set(a_base, a_field, (a_node), \
+			trp_right_get(a_base, a_field, (r_node))); \
+		trp_right_set(a_base, a_field, (r_node), (a_node)); \
+	} while(0)
 
 #define trp_gen(a_attr, a_pre, a_type, a_field, a_base, a_cmp) \
 a_attr a_type MAYBE_UNUSED *a_pre##first(struct trp_root *treap) \
@@ -96,7 +111,8 @@ a_attr a_type MAYBE_UNUSED *a_pre##first(struct trp_root *treap) \
 	trpn_first(a_base, a_field, treap->trp_root, ret); \
 	return trpn_pointer(a_base, ret); \
 } \
-a_attr a_type MAYBE_UNUSED *a_pre##next(struct trp_root *treap, a_type *node) { \
+a_attr a_type MAYBE_UNUSED *a_pre##next(struct trp_root *treap, a_type *node) \
+{ \
 	uint32_t ret; \
 	uint32_t offset = trpn_offset(a_base, node); \
 	if (~trp_right_get(a_base, a_field, offset)) { \
@@ -124,18 +140,19 @@ a_attr a_type MAYBE_UNUSED *a_pre##search(struct trp_root *treap, a_type *key) \
 { \
 	int cmp; \
 	uint32_t ret = treap->trp_root; \
-	while (~ret && (cmp = (a_cmp)(key, trpn_pointer(a_base,ret)))) \
+	while (~ret && (cmp = (a_cmp)(key, trpn_pointer(a_base,ret)))) { \
 		if (cmp < 0) \
 			ret = trp_left_get(a_base, a_field, ret); \
 		else \
 			ret = trp_right_get(a_base, a_field, ret); \
+	} \
 	return trpn_pointer(a_base, ret); \
 } \
 a_attr uint32_t MAYBE_UNUSED a_pre##insert_recurse(uint32_t cur_node, uint32_t ins_node) \
 { \
-	if (cur_node == ~0) \
+	if (cur_node == ~0) { \
 		return (ins_node); \
-	else { \
+	} else { \
 		uint32_t ret; \
 		int cmp = (a_cmp)(trpn_pointer(a_base, ins_node), \
 					trpn_pointer(a_base, cur_node)); \
@@ -163,7 +180,7 @@ a_attr void MAYBE_UNUSED a_pre##insert(struct trp_root *treap, a_type *node) \
 { \
 	uint32_t offset = trpn_offset(a_base, node); \
 	trp_node_new(a_base, a_field, offset); \
-	treap->trp_root = a_pre##insert_recurse( treap->trp_root, offset); \
+	treap->trp_root = a_pre##insert_recurse(treap->trp_root, offset); \
 } \
 a_attr uint32_t MAYBE_UNUSED a_pre##remove_recurse(uint32_t cur_node, uint32_t rem_node) \
 { \
