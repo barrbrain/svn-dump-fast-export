@@ -196,7 +196,7 @@ static void handle_revision(void)
 			dump_ctx.uuid, dump_ctx.url, rev_ctx.timestamp);
 }
 
-static void svndump_read(uint32_t url)
+void svndump_read(char *url)
 {
 	char *val;
 	char *t;
@@ -204,7 +204,7 @@ static void svndump_read(uint32_t url)
 	uint32_t len;
 	uint32_t key;
 
-	reset_dump_ctx(url);
+	reset_dump_ctx(pool_intern(url));
 	while ((t = buffer_read_line())) {
 		val = strstr(t, ": ");
 		if (!val)
@@ -275,9 +275,9 @@ static void svndump_read(uint32_t url)
 		handle_revision();
 }
 
-static void svndump_init(void)
+void svndump_init(const char *filename)
 {
-	buffer_init(NULL);
+	buffer_init(filename);
 	repo_init();
 	reset_dump_ctx(~0);
 	reset_rev_ctx(0);
@@ -285,7 +285,7 @@ static void svndump_init(void)
 	init_keys();
 }
 
-static void svndump_reset(void)
+void svndump_reset(void)
 {
 	log_reset();
 	buffer_reset();
@@ -293,12 +293,4 @@ static void svndump_reset(void)
 	reset_dump_ctx(~0);
 	reset_rev_ctx(0);
 	reset_node_ctx(NULL);
-}
-
-int main(int argc, char **argv)
-{
-	svndump_init();
-	svndump_read((argc > 1) ? pool_intern(argv[1]) : ~0);
-	svndump_reset();
-	return 0;
 }
