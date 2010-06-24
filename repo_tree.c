@@ -105,9 +105,8 @@ static struct repo_dirent *repo_read_dirent(uint32_t revision, uint32_t *path)
 	return dirent;
 }
 
-static void
-repo_write_dirent(uint32_t *path, uint32_t mode, uint32_t content_offset,
-                  uint32_t del)
+static void repo_write_dirent(uint32_t *path, uint32_t mode,
+                              uint32_t content_offset, uint32_t del)
 {
 	uint32_t name, revision, dir_o = ~0, parent_dir_o = ~0;
 	struct repo_dir *dir;
@@ -128,16 +127,16 @@ repo_write_dirent(uint32_t *path, uint32_t mode, uint32_t content_offset,
 			dirent = key;
 		else
 			dirent_free(1);
-		
+
 		if (dirent == key) {
 			dirent->mode = REPO_MODE_DIR;
 			dirent->content_offset = 0;
 			dirent_insert(&dir->entries, dirent);
 		}
 
-
 		if (dirent_offset(dirent) < dirent_pool.committed) {
-			dir_o = repo_dirent_is_dir(dirent) ? dirent->content_offset : ~0;
+			dir_o = repo_dirent_is_dir(dirent) ?
+					dirent->content_offset : ~0;
 			dirent_remove(&dir->entries, dirent);
 			dirent = dirent_pointer(dirent_alloc(1));
 			dirent->name_offset = name;
@@ -192,9 +191,8 @@ void repo_modify(uint32_t *path, uint32_t mode, uint32_t blob_mark)
 {
 	struct repo_dirent *src_dirent;
 	src_dirent = repo_read_dirent(active_commit, path);
-	if (src_dirent != NULL && blob_mark == 0) {
+	if (src_dirent != NULL && blob_mark == 0)
 		blob_mark = src_dirent->content_offset;
-	}
 	repo_write_dirent(path, mode, blob_mark, 0);
 }
 
@@ -207,11 +205,11 @@ static void repo_git_add_r(uint32_t depth, uint32_t *path, struct repo_dir *dir)
 
 static void repo_git_add(uint32_t depth, uint32_t *path, struct repo_dirent *dirent)
 {
-	if (repo_dirent_is_dir(dirent)) {
+	if (repo_dirent_is_dir(dirent))
 		repo_git_add_r(depth, path, repo_dir_from_dirent(dirent));
-	} else {
-		fast_export_modify(depth, path, dirent->mode, dirent->content_offset);
-	}
+	else
+		fast_export_modify(depth, path,
+		                   dirent->mode, dirent->content_offset);
 }
 
 static void repo_git_add_r(uint32_t depth, uint32_t *path, struct repo_dir *dir)
