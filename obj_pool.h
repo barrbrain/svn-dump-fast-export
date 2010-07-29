@@ -18,22 +18,7 @@ static struct { \
 	uint32_t size; \
 	uint32_t capacity; \
 	obj_t *base; \
-	FILE *file; \
-} pre##_pool = { 0, 0, 0, NULL, NULL}; \
-static MAYBE_UNUSED void pre##_init(void) \
-{ \
-	struct stat st; \
-	pre##_pool.file = fopen(#pre ".bin", "a+"); \
-	rewind(pre##_pool.file); \
-	fstat(fileno(pre##_pool.file), &st); \
-	pre##_pool.size = st.st_size / sizeof(obj_t); \
-	pre##_pool.committed = pre##_pool.size; \
-	pre##_pool.capacity = pre##_pool.size * 2; \
-	if (pre##_pool.capacity < initial_capacity) \
-		pre##_pool.capacity = initial_capacity; \
-	pre##_pool.base = malloc(pre##_pool.capacity * sizeof(obj_t)); \
-	fread(pre##_pool.base, sizeof(obj_t), pre##_pool.size, pre##_pool.file); \
-} \
+} pre##_pool = {0, 0, 0, NULL}; \
 static MAYBE_UNUSED uint32_t pre##_alloc(uint32_t count) \
 { \
 	uint32_t offset; \
@@ -64,19 +49,15 @@ static MAYBE_UNUSED obj_t *pre##_pointer(uint32_t offset) \
 } \
 static MAYBE_UNUSED void pre##_commit(void) \
 { \
-	pre##_pool.committed += fwrite(pre##_pool.base + pre##_pool.committed, \
-		sizeof(obj_t), pre##_pool.size - pre##_pool.committed, \
-		pre##_pool.file); \
+	pre##_pool.committed = pre##_pool.size; \
 } \
 static MAYBE_UNUSED void pre##_reset(void) \
 { \
 	free(pre##_pool.base); \
-	if (pre##_pool.file) \
-		fclose(pre##_pool.file); \
 	pre##_pool.base = NULL; \
 	pre##_pool.size = 0; \
 	pre##_pool.capacity = 0; \
-	pre##_pool.file = NULL; \
+	pre##_pool.committed = 0; \
 }
 
 #endif

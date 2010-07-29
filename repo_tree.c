@@ -308,9 +308,6 @@ static void mark_init(void)
 
 void repo_init() {
 	pool_init();
-	commit_init();
-	dir_init();
-	dirent_init();
 	mark_init();
 	if (commit_pool.size == 0) {
 		/* Create empty tree for commit 0. */

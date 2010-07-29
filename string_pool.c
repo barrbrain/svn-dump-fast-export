@@ -95,7 +95,6 @@ void pool_init(void)
 {
 	uint32_t node;
 	uint32_t string = 0;
-	string_init();
 	while (string < string_pool.size) {
 		node = node_alloc(1);
 		node_pointer(node)->offset = string;
