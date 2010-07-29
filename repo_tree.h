@@ -19,7 +19,7 @@ uint32_t repo_replace(uint32_t *path, uint32_t blob_mark);
 void repo_modify(uint32_t *path, uint32_t mode, uint32_t blob_mark);
 void repo_delete(uint32_t *path);
 void repo_commit(uint32_t revision, uint32_t author, char *log, uint32_t uuid,
-                 uint32_t url, time_t timestamp);
+		 uint32_t url, long unsigned timestamp);
 void repo_diff(uint32_t r1, uint32_t r2);
 void repo_init(void);
 void repo_reset(void);

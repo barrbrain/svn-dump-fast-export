@@ -74,6 +74,7 @@ void buffer_copy_bytes(uint32_t len)
 		len -= in;
 		fwrite(byte_buffer, 1, in, stdout);
 		if (ferror(infile) || ferror(stdout))
+			/* NEEDSWORK: handle error. */
 			break;
 	}
 }

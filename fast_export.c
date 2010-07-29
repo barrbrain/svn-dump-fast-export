@@ -23,7 +23,7 @@ void fast_export_delete(uint32_t depth, uint32_t *path)
 }
 
 void fast_export_modify(uint32_t depth, uint32_t *path, uint32_t mode,
-						uint32_t mark)
+			uint32_t mark)
 {
 	/* Mode must be 100644, 100755, 120000, or 160000. */
 	printf("M %06o :%d ", mode, mark);
@@ -33,7 +33,8 @@ void fast_export_modify(uint32_t depth, uint32_t *path, uint32_t mode,
 
 static char gitsvnline[MAX_GITSVN_LINE_LEN];
 void fast_export_commit(uint32_t revision, uint32_t author, char *log,
-						uint32_t uuid, uint32_t url, time_t timestamp)
+			uint32_t uuid, uint32_t url,
+			unsigned long timestamp)
 {
 	if (!log)
 		log = "";

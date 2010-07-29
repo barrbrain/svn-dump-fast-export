@@ -106,7 +106,7 @@ static struct repo_dirent *repo_read_dirent(uint32_t revision, uint32_t *path)
 }
 
 static void repo_write_dirent(uint32_t *path, uint32_t mode,
-                              uint32_t content_offset, uint32_t del)
+			      uint32_t content_offset, uint32_t del)
 {
 	uint32_t name, revision, dir_o = ~0, parent_dir_o = ~0;
 	struct repo_dir *dir;
@@ -209,7 +209,7 @@ static void repo_git_add(uint32_t depth, uint32_t *path, struct repo_dirent *dir
 		repo_git_add_r(depth, path, repo_dir_from_dirent(dirent));
 	else
 		fast_export_modify(depth, path,
-		                   dirent->mode, dirent->content_offset);
+				   dirent->mode, dirent->content_offset);
 }
 
 static void repo_git_add_r(uint32_t depth, uint32_t *path, struct repo_dir *dir)
@@ -223,7 +223,7 @@ static void repo_git_add_r(uint32_t depth, uint32_t *path, struct repo_dir *dir)
 }
 
 static void repo_diff_r(uint32_t depth, uint32_t *path, struct repo_dir *dir1,
-                        struct repo_dir *dir2)
+			struct repo_dir *dir2)
 {
 	struct repo_dirent *de1, *de2;
 	de1 = repo_first_dirent(dir1);
@@ -277,13 +277,13 @@ static uint32_t path_stack[REPO_MAX_PATH_DEPTH];
 void repo_diff(uint32_t r1, uint32_t r2)
 {
 	repo_diff_r(0,
-	            path_stack,
-	            repo_commit_root_dir(commit_pointer(r1)),
-	            repo_commit_root_dir(commit_pointer(r2)));
+		    path_stack,
+		    repo_commit_root_dir(commit_pointer(r1)),
+		    repo_commit_root_dir(commit_pointer(r2)));
 }
 
 void repo_commit(uint32_t revision, uint32_t author, char *log, uint32_t uuid,
-                 uint32_t url, time_t timestamp)
+		 uint32_t url, unsigned long timestamp)
 {
 	fast_export_commit(revision, author, log, uuid, url, timestamp);
 	pool_commit();

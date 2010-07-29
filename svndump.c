@@ -32,6 +32,7 @@
 #define NODE_CTX 2
 
 #define LENGTH_UNKNOWN (~0)
+#define DATE_RFC2822_LEN 31
 
 /* Create memory pool for log messages */
 obj_pool_gen(log, char, 4096);
@@ -176,7 +177,7 @@ static void handle_node(void)
 		else if (node_ctx.srcRev && node_ctx.textLength != LENGTH_UNKNOWN)
 			node_ctx.srcMode = repo_replace(node_ctx.dst, node_ctx.mark);
 		else if ((node_ctx.type == REPO_MODE_DIR && !node_ctx.srcRev) ||
-		         node_ctx.textLength != LENGTH_UNKNOWN)
+			 node_ctx.textLength != LENGTH_UNKNOWN)
 			repo_add(node_ctx.dst, node_ctx.type, node_ctx.mark);
 	}
 
