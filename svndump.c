@@ -34,6 +34,9 @@
 #define LENGTH_UNKNOWN (~0)
 #define DATE_RFC2822_LEN 31
 
+#define MD5_HEX_LENGTH 32
+#define SHA1_HEX_LENGTH 40
+
 /* Create memory pool for log messages */
 obj_pool_gen(log, char, 4096);
 
@@ -51,6 +54,11 @@ static char* log_copy(uint32_t length, char *log)
 static struct {
 	uint32_t action, propLength, textLength, srcRev, srcMode, mark, type;
 	uint32_t src[REPO_MAX_PATH_DEPTH], dst[REPO_MAX_PATH_DEPTH];
+	uint32_t text_delta, prop_delta;
+	char text_delta_base_md5[MD5_HEX_LENGTH + 1];
+	char text_content_sha1[SHA1_HEX_LENGTH + 1];
+	char text_delta_base_sha1[SHA1_HEX_LENGTH + 1];
+	char text_copy_source_sha1[SHA1_HEX_LENGTH + 1];
 } node_ctx;
 
 static struct {
@@ -60,14 +68,20 @@ static struct {
 } rev_ctx;
 
 static struct {
-	uint32_t uuid, url;
+	uint32_t version, uuid, url;
 } dump_ctx;
 
 static struct {
-	uint32_t svn_log, svn_author, svn_date, svn_executable, svn_special, uuid,
+	uint32_t svn_log, svn_author, svn_date, svn_executable, svn_special,
 		revision_number, node_path, node_kind, node_action,
 		node_copyfrom_path, node_copyfrom_rev, text_content_length,
-		prop_content_length, content_length;
+		prop_content_length, content_length,
+		/* SVN dump version 2 */
+		uuid, svn_fs_dump_format_version,
+		/* SVN dump version 3 */
+		text_delta, prop_delta, text_content_sha1,
+		text_delta_base_md5, text_delta_base_sha1,
+		text_copy_source_sha1;
 } keys;
 
 static void reset_node_ctx(char *fname)
@@ -81,6 +95,12 @@ static void reset_node_ctx(char *fname)
 	node_ctx.srcMode = 0;
 	pool_tok_seq(REPO_MAX_PATH_DEPTH, node_ctx.dst, "/", fname);
 	node_ctx.mark = 0;
+	node_ctx.text_delta = 0;
+	node_ctx.prop_delta = 0;
+	*node_ctx.text_delta_base_md5 = '\0';
+	*node_ctx.text_content_sha1 = '\0';
+	*node_ctx.text_delta_base_sha1 = '\0';
+	*node_ctx.text_copy_source_sha1 = '\0';
 }
 
 static void reset_rev_ctx(uint32_t revision)
@@ -94,6 +114,7 @@ static void reset_rev_ctx(uint32_t revision)
 static void reset_dump_ctx(uint32_t url)
 {
 	dump_ctx.url = url;
+	dump_ctx.version = 1;
 	dump_ctx.uuid = ~0;
 }
 
@@ -104,7 +125,6 @@ static void init_keys(void)
 	keys.svn_date = pool_intern("svn:date");
 	keys.svn_executable = pool_intern("svn:executable");
 	keys.svn_special = pool_intern("svn:special");
-	keys.uuid = pool_intern("UUID");
 	keys.revision_number = pool_intern("Revision-number");
 	keys.node_path = pool_intern("Node-path");
 	keys.node_kind = pool_intern("Node-kind");
@@ -114,6 +134,16 @@ static void init_keys(void)
 	keys.text_content_length = pool_intern("Text-content-length");
 	keys.prop_content_length = pool_intern("Prop-content-length");
 	keys.content_length = pool_intern("Content-length");
+	/* SVN dump version 2 */
+	keys.svn_fs_dump_format_version = pool_intern("SVN-fs-dump-format-version");
+	keys.uuid = pool_intern("UUID");
+	/* SVN dump version 3 */
+	keys.text_delta = pool_intern("Text-delta");
+	keys.prop_delta = pool_intern("Prop-delta");
+	keys.text_delta_base_md5 = pool_intern("Text-delta-base-md5");
+	keys.text_delta_base_sha1 = pool_intern("Text-delta-base-sha1");
+	keys.text_copy_source_sha1 = pool_intern("Text-copy-source-sha1");
+	keys.text_content_sha1 = pool_intern("Text-content-sha1");
 }
 
 static void read_props(void)
@@ -217,7 +247,9 @@ void svndump_read(char *url)
 		*val++ = '\0';
 		key = pool_intern(t);
 
-		if (key == keys.uuid) {
+		if (key == keys.svn_fs_dump_format_version) {
+			dump_ctx.version = atoi(val);
+		} else if (key == keys.uuid) {
 			dump_ctx.uuid = pool_intern(val);
 		} else if (key == keys.revision_number) {
 			if (active_ctx == NODE_CTX)
@@ -259,6 +291,22 @@ void svndump_read(char *url)
 			node_ctx.textLength = atoi(val);
 		} else if (key == keys.prop_content_length) {
 			node_ctx.propLength = atoi(val);
+		} else if (key == keys.text_delta) {
+			node_ctx.text_delta = !strcmp(val, "true");
+		} else if (key == keys.prop_delta) {
+			node_ctx.prop_delta = !strcmp(val, "true");
+		} else if (key == keys.text_delta_base_md5) {
+			strncpy(node_ctx.text_delta_base_md5, val,
+				MD5_HEX_LENGTH + 1);
+		} else if (key == keys.text_delta_base_sha1) {
+			strncpy(node_ctx.text_delta_base_sha1, val,
+				SHA1_HEX_LENGTH + 1);
+		} else if (key == keys.text_copy_source_sha1) {
+			strncpy(node_ctx.text_copy_source_sha1, val,
+				SHA1_HEX_LENGTH + 1);
+		} else if (key == keys.text_content_sha1) {
+			strncpy(node_ctx.text_content_sha1, val,
+				SHA1_HEX_LENGTH + 1);
 		} else if (key == keys.content_length) {
 			len = atoi(val);
 			buffer_read_line(&input);
