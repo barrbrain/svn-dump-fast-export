@@ -64,7 +64,9 @@ void fast_export_commit(uint32_t revision, uint32_t author, char *log,
 	printf("progress Imported commit %"PRIu32".\n\n", revision);
 }
 
-void fast_export_blob(uint32_t mode, uint32_t mark, uint32_t len, struct line_buffer *input)
+void fast_export_blob(uint32_t mode, uint32_t mark, uint32_t len,
+			uint32_t delta, uint32_t srcMark, uint32_t srcMode,
+			struct line_buffer *input)
 {
 	if (mode == REPO_MODE_LNK) {
 		/* svn symlink blobs start with "link " */

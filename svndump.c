@@ -52,7 +52,7 @@ static char* log_copy(uint32_t length, char *log)
 }
 
 static struct {
-	uint32_t action, propLength, textLength, srcRev, srcMode, mark, type;
+	uint32_t action, propLength, textLength, srcRev, srcMode, srcMark, mark, type;
 	uint32_t src[REPO_MAX_PATH_DEPTH], dst[REPO_MAX_PATH_DEPTH];
 	uint32_t text_delta, prop_delta;
 	char text_delta_base_md5[MD5_HEX_LENGTH + 1];
@@ -93,6 +93,7 @@ static void reset_node_ctx(char *fname)
 	node_ctx.src[0] = ~0;
 	node_ctx.srcRev = 0;
 	node_ctx.srcMode = 0;
+	node_ctx.srcMark = 0;
 	pool_tok_seq(REPO_MAX_PATH_DEPTH, node_ctx.dst, "/", fname);
 	node_ctx.mark = 0;
 	node_ctx.text_delta = 0;
@@ -176,17 +177,42 @@ static void read_props(void)
 			}
 			key = ~0;
 			buffer_read_line(&input);
+		} else if (!strncmp(t, "D ", 2)) {
+			len = atoi(&t[2]);
+			key = pool_intern(buffer_read_string(&input, len));
+			buffer_read_line(&input);
+			if (key == keys.svn_executable) {
+				if (node_ctx.type == REPO_MODE_EXE)
+					node_ctx.type = REPO_MODE_BLB;
+			} else if (key == keys.svn_special) {
+				if (node_ctx.type == REPO_MODE_LNK)
+					node_ctx.type = REPO_MODE_BLB;
+			}
+			key = ~0;
 		}
 	}
 }
 
 static void handle_node(void)
 {
+	if (node_ctx.prop_delta) {
+		if (node_ctx.srcRev)
+			node_ctx.srcMode = repo_read_mode(node_ctx.srcRev, node_ctx.src);
+		else
+			node_ctx.srcMode = repo_read_mode(rev_ctx.revision, node_ctx.dst);
+		if (node_ctx.srcMode && node_ctx.action != NODEACT_REPLACE)
+			node_ctx.type = node_ctx.srcMode;
+	}
+
 	if (node_ctx.propLength != LENGTH_UNKNOWN && node_ctx.propLength)
 		read_props();
 
-	if (node_ctx.srcRev)
+	if (node_ctx.srcRev) {
+		node_ctx.srcMark = repo_read_mark(node_ctx.srcRev, node_ctx.src);
 		node_ctx.srcMode = repo_copy(node_ctx.srcRev, node_ctx.src, node_ctx.dst);
+	} else {
+		node_ctx.srcMark = repo_read_mark(rev_ctx.revision, node_ctx.dst);
+	}
 
 	if (node_ctx.textLength != LENGTH_UNKNOWN &&
 	    node_ctx.type != REPO_MODE_DIR)
@@ -217,8 +243,9 @@ static void handle_node(void)
 		node_ctx.type = node_ctx.srcMode;
 
 	if (node_ctx.mark)
-		fast_export_blob(node_ctx.type,
-				 node_ctx.mark, node_ctx.textLength, &input);
+		fast_export_blob(node_ctx.type, node_ctx.mark, node_ctx.textLength,
+				node_ctx.text_delta, node_ctx.srcMark, node_ctx.srcMode,
+				&input);
 	else if (node_ctx.textLength != LENGTH_UNKNOWN)
 		buffer_skip_bytes(&input, node_ctx.textLength);
 }

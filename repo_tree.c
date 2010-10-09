@@ -157,6 +157,29 @@ static void repo_write_dirent(uint32_t *path, uint32_t mode,
 		dent_remove(&dir_pointer(parent_dir_o)->entries, dent);
 }
 
+uint32_t repo_read_mark(uint32_t revision, uint32_t *path)
+{
+	uint32_t mode = 0, content_offset = 0;
+	struct repo_dirent *src_dent;
+	src_dent = repo_read_dirent(revision, path);
+	if (src_dent != NULL) {
+		mode = src_dent->mode;
+		content_offset = src_dent->content_offset;
+	}
+	return mode && mode != REPO_MODE_DIR ? content_offset : 0;
+}
+
+uint32_t repo_read_mode(uint32_t revision, uint32_t *path)
+{
+	uint32_t mode = 0;
+	struct repo_dirent *src_dent;
+	src_dent = repo_read_dirent(revision, path);
+	if (src_dent != NULL) {
+		mode = src_dent->mode;
+	}
+	return mode;
+}
+
 uint32_t repo_copy(uint32_t revision, uint32_t *src, uint32_t *dst)
 {
 	uint32_t mode = 0, content_offset = 0;
