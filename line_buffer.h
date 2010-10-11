@@ -18,6 +18,7 @@ int buffer_ferror(struct line_buffer *buf);
 int buffer_at_eof(struct line_buffer *buf);
 char *buffer_read_line(struct line_buffer *buf);
 char *buffer_read_string(struct line_buffer *buf, uint32_t len);
+int buffer_read_char(struct line_buffer *buf);
 void buffer_read_binary(struct strbuf *sb, uint32_t len, struct line_buffer *f);
 void buffer_copy_bytes(struct line_buffer *buf, off_t len);
 off_t buffer_skip_bytes(struct line_buffer *buf, off_t len);
