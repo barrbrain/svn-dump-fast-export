@@ -30,6 +30,16 @@ int buffer_deinit(struct line_buffer *buf)
 	return err;
 }
 
+int buffer_at_eof(struct line_buffer *buf)
+{
+	int ch;
+	if ((ch = fgetc(buf->infile)) == EOF)
+		return 1;
+	if (ungetc(ch, buf->infile) == EOF)
+		return error("cannot unget %c: %s\n", ch, strerror(errno));
+	return 0;
+}
+
 /* Read a line without trailing newline. */
 char *buffer_read_line(struct line_buffer *buf)
 {
