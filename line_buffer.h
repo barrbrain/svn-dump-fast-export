@@ -16,8 +16,8 @@ int buffer_init(struct line_buffer *buf, const char *filename);
 int buffer_deinit(struct line_buffer *buf);
 char *buffer_read_line(struct line_buffer *buf);
 char *buffer_read_string(struct line_buffer *buf, uint32_t len);
-void buffer_copy_bytes(struct line_buffer *buf, uint32_t len);
-uint32_t buffer_skip_bytes(struct line_buffer *buf, uint32_t len);
+void buffer_copy_bytes(struct line_buffer *buf, off_t len);
+off_t buffer_skip_bytes(struct line_buffer *buf, off_t len);
 void buffer_reset(struct line_buffer *buf);
 
 #endif

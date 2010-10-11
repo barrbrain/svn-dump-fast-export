@@ -59,7 +59,7 @@ char *buffer_read_string(struct line_buffer *buf, uint32_t len)
 	return ferror(buf->infile) ? NULL : buf->blob_buffer.buf;
 }
 
-void buffer_copy_bytes(struct line_buffer *buf, uint32_t len)
+void buffer_copy_bytes(struct line_buffer *buf, off_t len)
 {
 	char byte_buffer[COPY_BUFFER_LEN];
 	uint32_t in;
@@ -75,12 +75,12 @@ void buffer_copy_bytes(struct line_buffer *buf, uint32_t len)
 	}
 }
 
-uint32_t buffer_skip_bytes(struct line_buffer *buf, uint32_t nbytes)
+off_t buffer_skip_bytes(struct line_buffer *buf, off_t nbytes)
 {
-	uint32_t done = 0;
+	off_t done = 0;
 	while (done < nbytes && !feof(buf->infile) && !ferror(buf->infile)) {
 		char byte_buffer[COPY_BUFFER_LEN];
-		uint32_t len = nbytes - done;
+		off_t len = nbytes - done;
 		uint32_t in = len < COPY_BUFFER_LEN ? len : COPY_BUFFER_LEN;
 		done += fread(byte_buffer, 1, in, buf->infile);
 	}
