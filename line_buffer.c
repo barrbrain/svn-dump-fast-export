@@ -30,6 +30,11 @@ int buffer_deinit(struct line_buffer *buf)
 	return err;
 }
 
+int buffer_ferror(struct line_buffer *buf)
+{
+	return ferror(buf->infile);
+}
+
 int buffer_at_eof(struct line_buffer *buf)
 {
 	int ch;
