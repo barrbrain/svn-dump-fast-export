@@ -17,7 +17,6 @@
 obj_pool_gen(blob, char, 4096);
 
 static char line_buffer[LINE_BUFFER_LEN];
-static char byte_buffer[COPY_BUFFER_LEN];
 static FILE *infile;
 
 int buffer_init(const char *filename)
@@ -67,6 +66,7 @@ char *buffer_read_string(uint32_t len)
 
 void buffer_copy_bytes(uint32_t len)
 {
+	char byte_buffer[COPY_BUFFER_LEN];
 	uint32_t in;
 	while (len > 0 && !feof(infile)) {
 		in = len < COPY_BUFFER_LEN ? len : COPY_BUFFER_LEN;
@@ -81,6 +81,7 @@ void buffer_copy_bytes(uint32_t len)
 
 void buffer_skip_bytes(uint32_t len)
 {
+	char byte_buffer[COPY_BUFFER_LEN];
 	uint32_t in;
 	while (len > 0 && !feof(infile) && !ferror(infile)) {
 		in = len < COPY_BUFFER_LEN ? len : COPY_BUFFER_LEN;
