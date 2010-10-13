@@ -220,8 +220,13 @@ static int apply_one_window(struct line_buffer *delta, off_t *delta_len,
 		rv = error("Cannot read delta: %s", strerror(errno));
 		goto done;
 	}
+	strbuf_grow(&ctx.out, out_len);
 	if (apply_window_in_core(&ctx) || write_strbuf(&ctx.out, out)) {
 		rv = -1;
+		goto done;
+	}
+	if (ctx.out.len != out_len) {
+		rv = error("Invalid delta: incorrect postimage length");
 		goto done;
 	}
  done:
