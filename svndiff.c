@@ -188,6 +188,8 @@ static int apply_window_in_core(struct window *ctx)
 	while (insn != ctx->instructions.buf + ctx->instructions.len)
 		if (step(ctx, &insn, &data_pos))
 			return -1;
+	if (data_pos != ctx->data.len)
+		return error("Invalid delta: does not copy all new data");
 	return 0;
 }
 
