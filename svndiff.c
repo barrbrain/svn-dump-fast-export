@@ -23,6 +23,10 @@
 #define VLI_DIGIT_MASK	0x7f
 #define VLI_BITS_PER_DIGIT 7
 
+struct window {
+	struct strbuf data;
+};
+
 static int read_magic(struct line_buffer *in, off_t *len)
 {
 	static const char magic[] = {'S', 'V', 'N', '\0'};
@@ -101,11 +105,25 @@ static int read_length(struct line_buffer *in, size_t *result, off_t *len)
 	return 0;
 }
 
+static int read_chunk(struct line_buffer *delta, off_t *delta_len,
+		      struct strbuf *buf, size_t len)
+{
+	if (len > maximum_signed_value_of_type(off_t) ||
+	    (off_t) len > *delta_len)
+		return -1;
+	strbuf_reset(buf);
+	buffer_read_binary(buf, len, delta);
+	*delta_len -= buf->len;
+	return 0;
+}
+
 static int apply_one_window(struct line_buffer *delta, off_t *delta_len)
 {
+	struct window ctx = {STRBUF_INIT};
 	size_t out_len;
 	size_t instructions_len;
 	size_t data_len;
+	int rv = 0;
 	assert(delta_len);
 
 	/* "source view" offset and length already handled; */
@@ -115,9 +133,12 @@ static int apply_one_window(struct line_buffer *delta, off_t *delta_len)
 		return -1;
 	if (instructions_len > 0)
 		return error("What do you think I am?  A delta applier?");
-	if (data_len > 0)
-		return error("No support for inline data yet");
-	return 0;
+	if (read_chunk(delta, delta_len, &ctx.data, data_len))
+		return error("Invalid delta: incomplete data section");
+	if (buffer_ferror(delta))
+		rv = error("Cannot read delta: %s", strerror(errno));
+	strbuf_release(&ctx.data);
+	return rv;
 }
 
 int svndiff0_apply(struct line_buffer *delta, off_t delta_len,
