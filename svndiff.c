@@ -20,7 +20,12 @@
  *   | packed_view_selector int
  *   | packed_copyfrom_data
  *   ;
+ * view_selector ::= copyfrom_source
+ *   | copyfrom_target
+ *   ;
+ * copyfrom_target ::= # binary 01 000000;
  * copyfrom_data ::= # binary 10 000000;
+ * packed_view_selector ::= # view_selector OR-ed with 6 bit value;
  * packed_copyfrom_data ::= # copyfrom_data OR-ed with 6 bit value;
  * int ::= highdigit* lowdigit;
  * highdigit ::= # binary 1000 0000 OR-ed with 7 bit value;
@@ -28,6 +33,7 @@
  */
 
 #define INSN_MASK	0xc0
+#define INSN_COPYFROM_TARGET	0x40
 #define INSN_COPYFROM_DATA	0x80
 #define OPERAND_MASK	0x3f
 
@@ -138,6 +144,21 @@ static int read_chunk(struct line_buffer *delta, off_t *delta_len,
 	return 0;
 }
 
+static int copyfrom_target(struct window *ctx, const char **instructions,
+			   size_t nbytes, const char *insns_end)
+{
+	size_t offset;
+	if (parse_int(instructions, &offset, insns_end))
+		return -1;
+	if (offset >= ctx->out.len)
+		return error("Invalid delta: copies from the future.");
+	while (nbytes) {
+		strbuf_addch(&ctx->out, ctx->out.buf[offset++]);
+		nbytes--;
+	}
+	return 0;
+}
+
 static int copyfrom_data(struct window *ctx, size_t *data_pos, size_t nbytes)
 {
 	const size_t pos = *data_pos;
@@ -171,9 +192,14 @@ static int step(struct window *ctx, const char **instructions, size_t *data_pos)
 	instruction = (unsigned char) **instructions;
 	if (parse_first_operand(instructions, &nbytes, insns_end))
 		return -1;
-	if ((instruction & INSN_MASK) != INSN_COPYFROM_DATA)
+	switch (instruction & INSN_MASK) {
+	case INSN_COPYFROM_TARGET:
+		return copyfrom_target(ctx, instructions, nbytes, insns_end);
+	case INSN_COPYFROM_DATA:
+		return copyfrom_data(ctx, data_pos, nbytes);
+	default:
 		return error("Unknown instruction %x", instruction);
-	return copyfrom_data(ctx, data_pos, nbytes);
+	}
 }
 
 static int apply_window_in_core(struct window *ctx)
