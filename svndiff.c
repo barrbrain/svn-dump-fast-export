@@ -12,6 +12,7 @@
  * See http://svn.apache.org/repos/asf/subversion/trunk/notes/svndiff.
  *
  * svndiff0 ::= 'SVN\0' window window*;
+ * window ::= int int int int int instructions inline_data;
  * int ::= highdigit* lowdigit;
  * highdigit ::= # binary 1000 0000 OR-ed with 7 bit value;
  * lowdigit ::= # 7 bit value;
@@ -75,4 +76,67 @@ static int parse_int(const char **buf, size_t *result, const char *end)
 	}
 	return error("Invalid instruction: incomplete integer %"PRIu64,
 		     (uint64_t) rv);
+}
+
+static int read_offset(struct line_buffer *in, off_t *result, off_t *len)
+{
+	uintmax_t val;
+	if (read_int(in, &val, len))
+		return -1;
+	if (val > maximum_signed_value_of_type(off_t))
+		return error("Unrepresentable offset: %"PRIuMAX, val);
+	*result = val;
+	return 0;
+}
+
+static int read_length(struct line_buffer *in, size_t *result, off_t *len)
+{
+	uintmax_t val;
+	if (read_int(in, &val, len))
+		return -1;
+	if (val > SIZE_MAX)
+		return error("Unrepresentable length: %"PRIuMAX, val);
+	*result = val;
+	return 0;
+}
+
+static int apply_one_window(struct line_buffer *delta, off_t *delta_len)
+{
+	size_t out_len;
+	size_t instructions_len;
+	size_t data_len;
+	assert(delta_len);
+
+	/* "source view" offset and length already handled; */
+	if (read_length(delta, &out_len, delta_len) ||
+	    read_length(delta, &instructions_len, delta_len) ||
+	    read_length(delta, &data_len, delta_len))
+		return -1;
+	if (instructions_len > 0)
+		return error("What do you think I am?  A delta applier?");
+	if (data_len > 0)
+		return error("No support for inline data yet");
+	return 0;
+}
+
+int svndiff0_apply(struct line_buffer *delta, off_t delta_len,
+		   struct line_buffer *preimage, FILE *postimage)
+{
+	assert(delta && preimage && postimage);
+
+	if (read_magic(delta, &delta_len))
+		return -1;
+	while (delta_len > 0) {	/* For each window: */
+		off_t pre_off;
+		size_t pre_len;
+		if (read_offset(delta, &pre_off, &delta_len) ||
+		    read_length(delta, &pre_len, &delta_len) ||
+		    apply_one_window(delta, &delta_len))
+			return -1;
+		if (delta_len && buffer_at_eof(delta))
+			return error("Delta ends early! "
+				     "(%"PRIu64" bytes remaining)",
+				     (uint64_t) delta_len);
+	}
+	return 0;
 }
