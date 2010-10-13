@@ -4,6 +4,7 @@
  */
 
 #include "git-compat-util.h"
+#include "sliding_window.h"
 #include "line_buffer.h"
 
 /*
@@ -122,21 +123,28 @@ static int apply_one_window(struct line_buffer *delta, off_t *delta_len)
 int svndiff0_apply(struct line_buffer *delta, off_t delta_len,
 		   struct line_buffer *preimage, FILE *postimage)
 {
+	struct view preimage_view = {preimage, 0, STRBUF_INIT};
 	assert(delta && preimage && postimage);
 
 	if (read_magic(delta, &delta_len))
-		return -1;
+		goto fail;
 	while (delta_len > 0) {	/* For each window: */
-		off_t pre_off;
+		off_t pre_off = pre_off;
 		size_t pre_len;
 		if (read_offset(delta, &pre_off, &delta_len) ||
 		    read_length(delta, &pre_len, &delta_len) ||
+		    move_window(&preimage_view, pre_off, pre_len) ||
 		    apply_one_window(delta, &delta_len))
-			return -1;
-		if (delta_len && buffer_at_eof(delta))
-			return error("Delta ends early! "
-				     "(%"PRIu64" bytes remaining)",
-				     (uint64_t) delta_len);
+			goto fail;
+		if (delta_len && buffer_at_eof(delta)) {
+			error("Delta ends early! (%"PRIu64" bytes remaining)",
+			      (uint64_t) delta_len);
+			goto fail;
+		}
 	}
+	strbuf_release(&preimage_view.buf);
 	return 0;
+ fail:
+	strbuf_release(&preimage_view.buf);
+	return -1;
 }
