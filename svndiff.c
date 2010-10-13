@@ -23,6 +23,7 @@
  * view_selector ::= copyfrom_source
  *   | copyfrom_target
  *   ;
+ * copyfrom_source ::= # binary 00 000000;
  * copyfrom_target ::= # binary 01 000000;
  * copyfrom_data ::= # binary 10 000000;
  * packed_view_selector ::= # view_selector OR-ed with 6 bit value;
@@ -33,6 +34,7 @@
  */
 
 #define INSN_MASK	0xc0
+#define INSN_COPYFROM_SOURCE	0x00
 #define INSN_COPYFROM_TARGET	0x40
 #define INSN_COPYFROM_DATA	0x80
 #define OPERAND_MASK	0x3f
@@ -42,6 +44,7 @@
 #define VLI_BITS_PER_DIGIT 7
 
 struct window {
+	struct view *in;
 	struct strbuf out;
 	struct strbuf instructions;
 	struct strbuf data;
@@ -144,6 +147,19 @@ static int read_chunk(struct line_buffer *delta, off_t *delta_len,
 	return 0;
 }
 
+static int copyfrom_source(struct window *ctx, const char **instructions,
+			   size_t nbytes, const char *insns_end)
+{
+	size_t offset;
+	if (parse_int(instructions, &offset, insns_end))
+		return -1;
+	if (unsigned_add_overflows(offset, nbytes) ||
+	    offset + nbytes > ctx->in->buf.len)
+		return error("Invalid delta: copies source data outside view.");
+	strbuf_add(&ctx->out, ctx->in->buf.buf + offset, nbytes);
+	return 0;
+}
+
 static int copyfrom_target(struct window *ctx, const char **instructions,
 			   size_t nbytes, const char *insns_end)
 {
@@ -193,12 +209,14 @@ static int step(struct window *ctx, const char **instructions, size_t *data_pos)
 	if (parse_first_operand(instructions, &nbytes, insns_end))
 		return -1;
 	switch (instruction & INSN_MASK) {
+	case INSN_COPYFROM_SOURCE:
+		return copyfrom_source(ctx, instructions, nbytes, insns_end);
 	case INSN_COPYFROM_TARGET:
 		return copyfrom_target(ctx, instructions, nbytes, insns_end);
 	case INSN_COPYFROM_DATA:
 		return copyfrom_data(ctx, data_pos, nbytes);
 	default:
-		return error("Unknown instruction %x", instruction);
+		return error("Invalid instruction %x", instruction);
 	}
 }
 
@@ -220,9 +238,9 @@ static int apply_window_in_core(struct window *ctx)
 }
 
 static int apply_one_window(struct line_buffer *delta, off_t *delta_len,
-			    FILE *out)
+			    struct view *preimage, FILE *out)
 {
-	struct window ctx = {STRBUF_INIT, STRBUF_INIT, STRBUF_INIT};
+	struct window ctx = {preimage, STRBUF_INIT, STRBUF_INIT, STRBUF_INIT};
 	size_t out_len;
 	size_t instructions_len;
 	size_t data_len;
@@ -278,7 +296,8 @@ int svndiff0_apply(struct line_buffer *delta, off_t delta_len,
 		if (read_offset(delta, &pre_off, &delta_len) ||
 		    read_length(delta, &pre_len, &delta_len) ||
 		    move_window(&preimage_view, pre_off, pre_len) ||
-		    apply_one_window(delta, &delta_len, postimage))
+		    apply_one_window(delta, &delta_len,
+				     &preimage_view, postimage))
 			goto fail;
 		if (delta_len && buffer_at_eof(delta)) {
 			error("Delta ends early! (%"PRIu64" bytes remaining)",
