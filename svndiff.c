@@ -24,6 +24,7 @@
 #define VLI_BITS_PER_DIGIT 7
 
 struct window {
+	struct strbuf instructions;
 	struct strbuf data;
 };
 
@@ -119,7 +120,7 @@ static int read_chunk(struct line_buffer *delta, off_t *delta_len,
 
 static int apply_one_window(struct line_buffer *delta, off_t *delta_len)
 {
-	struct window ctx = {STRBUF_INIT};
+	struct window ctx = {STRBUF_INIT, STRBUF_INIT};
 	size_t out_len;
 	size_t instructions_len;
 	size_t data_len;
@@ -131,13 +132,25 @@ static int apply_one_window(struct line_buffer *delta, off_t *delta_len)
 	    read_length(delta, &instructions_len, delta_len) ||
 	    read_length(delta, &data_len, delta_len))
 		return -1;
+	if (read_chunk(delta, delta_len, &ctx.instructions, instructions_len))
+		return error("Invalid delta: incomplete instructions section");
+	if (buffer_ferror(delta)) {
+		rv = error("Cannot read delta: %s", strerror(errno));
+		goto done;
+	}
+	if (read_chunk(delta, delta_len, &ctx.data, data_len)) {
+		rv = error("Invalid delta: incomplete data section");
+		goto done;
+	}
+	if (buffer_ferror(delta)) {
+		rv = error("Cannot read delta: %s", strerror(errno));
+		goto done;
+	}
 	if (instructions_len > 0)
 		return error("What do you think I am?  A delta applier?");
-	if (read_chunk(delta, delta_len, &ctx.data, data_len))
-		return error("Invalid delta: incomplete data section");
-	if (buffer_ferror(delta))
-		rv = error("Cannot read delta: %s", strerror(errno));
+ done:
 	strbuf_release(&ctx.data);
+	strbuf_release(&ctx.instructions);
 	return rv;
 }
 
