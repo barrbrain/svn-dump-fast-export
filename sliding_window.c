@@ -49,17 +49,19 @@ int move_window(struct view *view, off_t off, size_t len)
 		const off_t gap = off - file_offset;
 		const off_t nread = buffer_skip_bytes(view->file, gap);
 		if (nread != gap) {
-			if (!buffer_ferror(view->file))	/* View ends early. */
-				goto done;
+			if (!buffer_ferror(view->file))
+				return error("Preimage ends early");
 			return error("Cannot seek forward in input: %s",
 				     strerror(errno));
 		}
 		file_offset += gap;
 	}
 	buffer_read_binary(&view->buf, len - view->buf.len, view->file);
-	if (buffer_ferror(view->file))
+	if (view->buf.len != len) {
+		if (!buffer_ferror(view->file))
+			return error("Preimage ends early");
 		return error("Cannot read preimage: %s", strerror(errno));
- done:
+	}
 	view->off = off;
 	return 0;
 }
