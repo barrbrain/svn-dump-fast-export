@@ -9,10 +9,17 @@
 #include "line_buffer.h"
 #include "repo_tree.h"
 #include "string_pool.h"
+#include "svndiff.h"
 
 #define MAX_GITSVN_LINE_LEN 4096
+#define REPORT_FILENO 3
+
+#define SHA1_HEX_LENGTH 40
 
 static uint32_t first_commit_done;
+static struct line_buffer preimage = LINE_BUFFER_INIT;
+static struct line_buffer postimage = LINE_BUFFER_INIT;
+static struct line_buffer backchannel = LINE_BUFFER_INIT;
 
 void fast_export_delete(uint32_t depth, uint32_t *path)
 {
@@ -64,16 +71,91 @@ void fast_export_commit(uint32_t revision, uint32_t author, char *log,
 	printf("progress Imported commit %"PRIu32".\n\n", revision);
 }
 
+static int fast_export_save_blob(FILE *out)
+{
+	size_t len;
+	char *header;
+	char *end;
+	char *tail;
+
+	if (!backchannel.infile)
+		backchannel.infile = fdopen(REPORT_FILENO, "r");
+	if (!backchannel.infile)
+		return error("Could not open backchannel fd: %d", REPORT_FILENO);
+	header = buffer_read_line(&backchannel);
+	if (header == NULL)
+		return 1;
+	end = strchr(header, '\0');
+	if (end - header > 7 && !strcmp(end - 7, "missing"))
+		return error("cat-blob reports missing blob: %s", header);
+	if (end - header < SHA1_HEX_LENGTH)
+		return error("cat-blob header too short for SHA1: %s", header);
+	if (strncmp(header + SHA1_HEX_LENGTH, " blob ", 6))
+		return error("cat-blob header has wrong object type: %s", header);
+	len = strtoumax(header + SHA1_HEX_LENGTH + 6, &end, 10);
+	if (end == header + SHA1_HEX_LENGTH + 6)
+		return error("cat-blob header did not contain length: %s", header);
+	if (*end)
+		return error("cat-blob header contained garbage after length: %s", header);
+	buffer_copy_bytes(&backchannel, out, len);
+	tail = buffer_read_line(&backchannel);
+	if (!tail)
+		return 1;
+	if (*tail)
+		return error("cat-blob trailing line contained garbage: %s", tail);
+	return 0;
+}
+
 void fast_export_blob(uint32_t mode, uint32_t mark, uint32_t len,
 			uint32_t delta, uint32_t srcMark, uint32_t srcMode,
 			struct line_buffer *input)
 {
+	long preimage_len = 0;
+
+	if (delta) {
+		if (!preimage.infile)
+			preimage.infile = tmpfile();
+		if (!preimage.infile)
+			die("Unable to open temp file for blob retrieval");
+		if (srcMark) {
+			printf("cat-blob :%"PRIu32"\n", srcMark);
+			fflush(stdout);
+			if (srcMode == REPO_MODE_LNK)
+				fwrite("link ", 1, 5, preimage.infile);
+			if (fast_export_save_blob(preimage.infile))
+				die("Failed to retrieve blob for delta application");
+		}
+		preimage_len = ftell(preimage.infile);
+		fseek(preimage.infile, 0, SEEK_SET);
+		if (!postimage.infile)
+			postimage.infile = tmpfile();
+		if (!postimage.infile)
+			die("Unable to open temp file for blob application");
+		svndiff0_apply(input, len, &preimage, postimage.infile);
+		len = ftell(postimage.infile);
+		fseek(postimage.infile, 0, SEEK_SET);
+	}
+
 	if (mode == REPO_MODE_LNK) {
 		/* svn symlink blobs start with "link " */
-		buffer_skip_bytes(input, 5);
+		if (delta)
+			buffer_skip_bytes(&postimage, 5);
+		else
+			buffer_skip_bytes(input, 5);
 		len -= 5;
 	}
 	printf("blob\nmark :%"PRIu32"\ndata %"PRIu32"\n", mark, len);
-	buffer_copy_bytes(input, stdout, len);
+	if (!delta)
+		buffer_copy_bytes(input, stdout, len);
+	else
+		buffer_copy_bytes(&postimage, stdout, len);
 	fputc('\n', stdout);
+
+	if (preimage.infile) {
+		fseek(preimage.infile, 0, SEEK_SET);
+	}
+
+	if (postimage.infile) {
+		fseek(postimage.infile, 0, SEEK_SET);
+	}
 }
