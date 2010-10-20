@@ -1,10 +1,6 @@
 /*
- * Parse and rearrange a svnadmin dump.
- * Create the dump with:
- * svnadmin dump --incremental -r<startrev>:<endrev> <repository> >outfile
- *
- * Licensed under a two-clause BSD-style license.
- * See LICENSE for details.
+ * This file is in the public domain.
+ * You may freely use, modify, distribute, and relicense it.
  */
 
 #include <stdlib.h>
@@ -14,6 +10,7 @@ int main(int argc, char **argv)
 {
 	svndump_init(NULL);
 	svndump_read((argc > 1) ? argv[1] : NULL);
+	svndump_deinit();
 	svndump_reset();
 	return 0;
 }

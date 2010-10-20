@@ -3,7 +3,7 @@
  * See LICENSE for details.
  */
 
-#include "git-compat-util.h"
+#include "compat-util.h"
 #include "sliding_window.h"
 #include "line_buffer.h"
 #include "strbuf.h"

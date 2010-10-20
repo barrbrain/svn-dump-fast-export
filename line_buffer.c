@@ -3,10 +3,7 @@
  * See LICENSE for details.
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
+#include "compat-util.h"
 #include "line_buffer.h"
 #include "strbuf.h"
 

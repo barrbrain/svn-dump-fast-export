@@ -3,8 +3,7 @@
  * See LICENSE for details.
  */
 
-#include <string.h>
-
+#include "compat-util.h"
 #include "fast_export.h"
 #include "line_buffer.h"
 #include "repo_tree.h"

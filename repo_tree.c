@@ -3,8 +3,7 @@
  * See LICENSE for details.
  */
 
-#include <string.h>
-
+#include "compat-util.h"
 #include "string_pool.h"
 #include "repo_tree.h"
 #include "obj_pool.h"

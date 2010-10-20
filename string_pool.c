@@ -3,9 +3,7 @@
  * See LICENSE for details.
  */
 
-#include <string.h>
-#include <stdint.h>
-
+#include "compat-util.h"
 #include "trp.h"
 #include "obj_pool.h"
 #include "string_pool.h"

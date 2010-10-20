@@ -1,9 +1,6 @@
 #ifndef REPO_TREE_H_
 #define REPO_TREE_H_
 
-#include <stdint.h>
-#include <time.h>
-
 #define REPO_MODE_DIR 0040000
 #define REPO_MODE_BLB 0100644
 #define REPO_MODE_EXE 0100755

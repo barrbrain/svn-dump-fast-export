@@ -6,10 +6,6 @@
 #ifndef OBJ_POOL_H_
 #define OBJ_POOL_H_
 
-
-#include <stdint.h>
-#include <stdlib.h>
-#include <sys/stat.h>
 #define MAYBE_UNUSED __attribute__((__unused__))
 
 #define obj_pool_gen(pre, obj_t, initial_capacity) \

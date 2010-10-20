@@ -7,19 +7,15 @@
  * See LICENSE for details.
  */
 
-#define _GNU_SOURCE
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
-
-#include "mkgmtime.h"
-
+#include "compat-util.h"
 #include "repo_tree.h"
 #include "fast_export.h"
 #include "line_buffer.h"
 #include "obj_pool.h"
 #include "string_pool.h"
+
+#include <time.h>
+#include "mkgmtime.h"
 
 #define NODEACT_REPLACE 4
 #define NODEACT_DELETE 3
