@@ -135,7 +135,7 @@ static void repo_write_dirent(uint32_t *path, uint32_t mode,
 
 		if (dent_offset(dent) < dent_pool.committed) {
 			dir_o = repo_dirent_is_dir(dent) ?
-					dent->content_offset : ~0;
+					dent->content_offset : ~0u;
 			dent_remove(&dir->entries, dent);
 			dent = dent_pointer(dent_alloc(1));
 			dent->name_offset = name;

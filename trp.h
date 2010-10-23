@@ -70,15 +70,15 @@ struct trp_root {
 /* Node initializer. */
 #define trp_node_new(a_base, a_field, a_node) \
 	do { \
-		trp_left_set(a_base, a_field, (a_node), ~0); \
-		trp_right_set(a_base, a_field, (a_node), ~0); \
+		trp_left_set(a_base, a_field, (a_node), ~0u); \
+		trp_right_set(a_base, a_field, (a_node), ~0u); \
 	} while(0)
 
 /* Internal utility macros. */
 #define trpn_first(a_base, a_field, a_root, r_node) \
 	do { \
 		(r_node) = (a_root); \
-		if ((r_node) == ~0) \
+		if ((r_node) == ~0u) \
 			return NULL; \
 		while (~trp_left_get(a_base, a_field, (r_node))) \
 			(r_node) = trp_left_get(a_base, a_field, (r_node)); \
@@ -116,7 +116,7 @@ a_attr a_type MAYBE_UNUSED *a_pre##next(struct trp_root *treap, a_type *node) \
 			trp_right_get(a_base, a_field, offset), ret); \
 	} else { \
 		uint32_t tnode = treap->trp_root; \
-		ret = ~0; \
+		ret = ~0u; \
 		while (1) { \
 			int cmp = (a_cmp)(trpn_pointer(a_base, offset), \
 				trpn_pointer(a_base, tnode)); \
@@ -162,7 +162,7 @@ a_attr a_type MAYBE_UNUSED *a_pre##nsearch(struct trp_root *treap, a_type *key) 
 } \
 a_attr uint32_t MAYBE_UNUSED a_pre##insert_recurse(uint32_t cur_node, uint32_t ins_node) \
 { \
-	if (cur_node == ~0) { \
+	if (cur_node == ~0u) { \
 		return (ins_node); \
 	} else { \
 		uint32_t ret; \
@@ -202,10 +202,10 @@ a_attr uint32_t MAYBE_UNUSED a_pre##remove_recurse(uint32_t cur_node, uint32_t r
 		uint32_t ret; \
 		uint32_t left = trp_left_get(a_base, a_field, cur_node); \
 		uint32_t right = trp_right_get(a_base, a_field, cur_node); \
-		if (left == ~0) { \
-			if (right == ~0) \
-				return (~0); \
-		} else if (right == ~0 || trp_prio_get(left) < trp_prio_get(right)) { \
+		if (left == ~0u) { \
+			if (right == ~0u) \
+				return (~0u); \
+		} else if (right == ~0u || trp_prio_get(left) < trp_prio_get(right)) { \
 			trpn_rotate_right(a_base, a_field, cur_node, ret); \
 			right = a_pre##remove_recurse(cur_node, rem_node); \
 			trp_right_set(a_base, a_field, ret, right); \

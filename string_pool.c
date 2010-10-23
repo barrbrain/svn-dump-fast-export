@@ -62,7 +62,7 @@ uint32_t pool_intern(char *key)
 uint32_t pool_tok_r(char *str, const char *delim, char **saveptr)
 {
 	char *token = strtok_r(str, delim, saveptr);
-	return token ? pool_intern(token) : ~0;
+	return token ? pool_intern(token) : ~0u;
 }
 
 void pool_print_seq(uint32_t len, uint32_t *seq, char delim, FILE *stream)
@@ -78,10 +78,10 @@ void pool_print_seq(uint32_t len, uint32_t *seq, char delim, FILE *stream)
 uint32_t pool_tok_seq(uint32_t max, uint32_t *seq, char *delim, char *str)
 {
 	char *context = NULL;
-	uint32_t length = 0, token = str ? pool_tok_r(str, delim, &context) : ~0;
+	uint32_t length = 0, token = str ? pool_tok_r(str, delim, &context) : ~0u;
 	while (length < max) {
 		seq[length++] = token;
-		if (token == ~0)
+		if (token == ~0u)
 			break;
 		token = pool_tok_r(NULL, delim, &context);
 	}

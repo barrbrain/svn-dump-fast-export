@@ -61,7 +61,7 @@ static int read_magic(struct line_buffer *in, off_t *len)
 {
 	static const char magic[] = {'S', 'V', 'N', '\0'};
 	struct strbuf sb = STRBUF_INIT;
-	if (*len < sizeof(magic))
+	if (*len < (off_t)(sizeof(magic)))
 		return error("Invalid delta: no file type header");
 	buffer_read_binary(&sb, sizeof(magic), in);
 	if (sb.len != sizeof(magic))

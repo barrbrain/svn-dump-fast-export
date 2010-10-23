@@ -27,7 +27,7 @@
 #define REV_CTX  1
 #define NODE_CTX 2
 
-#define LENGTH_UNKNOWN (~0)
+#define LENGTH_UNKNOWN (~0u)
 #define DATE_RFC2822_LEN 31
 
 #define MD5_HEX_LENGTH 32
