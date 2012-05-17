@@ -5,6 +5,8 @@
  * Modifications (2010-10-19):
  *  - add license header.
  *  - remove unneeded functions.
+ * Modifications (2012-05-18):
+ *  - restore functions needed for downstream changes.
  */
 
 #ifndef STRBUF_H
@@ -57,6 +59,11 @@ struct strbuf {
 /*----- strbuf life cycle -----*/
 extern void strbuf_init(struct strbuf *, size_t);
 extern void strbuf_release(struct strbuf *);
+static inline void strbuf_swap(struct strbuf *a, struct strbuf *b) {
+	struct strbuf tmp = *a;
+	*a = *b;
+	*b = tmp;
+}
 
 /*----- strbuf size related -----*/
 extern void strbuf_grow(struct strbuf *, size_t);
@@ -78,6 +85,16 @@ static inline void strbuf_addch(struct strbuf *sb, int c) {
 }
 
 extern void strbuf_add(struct strbuf *, const void *, size_t);
+static inline void strbuf_addstr(struct strbuf *sb, const char *s) {
+	strbuf_add(sb, s, strlen(s));
+}
+
+extern void strbuf_insert(struct strbuf *, size_t pos, const void *, size_t);
+extern void strbuf_remove(struct strbuf *, size_t pos, size_t len);
+
+/* splice pos..pos+len with given data */
+extern void strbuf_splice(struct strbuf *, size_t pos, size_t len,
+                          const void *, size_t);
 
 extern size_t strbuf_fread(struct strbuf *, size_t, FILE *);
 
