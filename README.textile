@@ -1,6 +1,6 @@
 h1. A tool to convert a subversion dump for input to git-fast-import
 
-This project has largely continued as a fork embedded in git.git. Preliminary restructuring has been completed to facilitate upstreaming those changes.
+This project has largely continued as a fork embedded in git.git. The changes present in git v1.7.10.2 have been upstreamed.
 
 h1. License
 
@@ -9,8 +9,13 @@ It contains a derivative of "Jason Evans' hash-based treap implementation":http:
 It also contains a derivative of svndump-0.92, a parser in Java by Stefan Hegny and others. This was a component of "SvnToCCase":http://svn2cc.sarovar.org. 
 The rest of the project is presently copyright:
 * David Barr
-* Jonathan Nieder
 * Ramkumar Ramachandra
+* Jonathan Nieder
 * Ramsay Jones
+* Jim Meyering
+* Dmitry Ivankov
+* Ævar Arnfjörð Bjarmason
+* Michael Witten
+* Junio C Hamano
 
 See compat/LICENSE for licensing details of the compatibility library.
