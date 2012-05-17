@@ -16,9 +16,17 @@
 #include <errno.h>
 
 #define error(...) (fprintf(stderr, "error: " __VA_ARGS__), -1)
+#define warning(...) (fprintf(stderr, "warning: " __VA_ARGS__), -1)
 #define die(...) \
 	do { \
 		fprintf(stderr, "fatal: " __VA_ARGS__); \
+		exit(128); \
+	} while (0)
+#define die_errno(...) \
+	do { \
+		int _err = errno; \
+		fprintf(stderr, __VA_ARGS__); \
+		fprintf(stderr, ": %s", strerror(_err)); \
 		exit(128); \
 	} while (0)
 
