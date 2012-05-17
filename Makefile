@@ -1,6 +1,7 @@
 .PHONY: all clean
 CFLAGS = -Wall -W -g -O2 -Icompat -Ivcs-svn
 HEADERS = compat/mkgmtime.h \
+	compat/quote.h \
 	compat/strbuf.h \
 	vcs-svn/compat-util.h \
 	vcs-svn/fast_export.h \
@@ -14,6 +15,7 @@ HEADERS = compat/mkgmtime.h \
 	vcs-svn/trp.h
 
 OBJECTS = compat/mkgmtime.o \
+	compat/quote.o \
 	compat/strbuf.o \
 	contrib/svn-fe/svn-fe.o \
 	vcs-svn/fast_export.o \

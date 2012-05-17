@@ -1,7 +1,7 @@
 svn-dump-fast-export compatibility library license
 --------------------------------------------------
 
-strbuf.c and strbuf.h are:
+quote.c, quote.h, strbuf.c and strbuf.h are:
 
   Copyright (C) 2005-2010, Pierre Habouzit and others.
 
