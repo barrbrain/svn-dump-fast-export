@@ -15,7 +15,7 @@ HEADERS = mkgmtime.h \
 
 OBJECTS = mkgmtime.o \
 	strbuf.o \
-	svn-fe.o \
+	contrib/svn-fe/svn-fe.o \
 	vcs-svn/fast_export.o \
 	vcs-svn/line_buffer.o \
 	vcs-svn/repo_tree.o \
@@ -24,10 +24,10 @@ OBJECTS = mkgmtime.o \
 	vcs-svn/svndiff.o \
 	vcs-svn/svndump.o
 
-all: svn-fe
+all: contrib/svn-fe/svn-fe
 %.o: %.c $(HEADERS)
 	$(CC) -o $@ $(CFLAGS) -c $<
-svn-fe: $(OBJECTS)
+contrib/svn-fe/svn-fe: $(OBJECTS)
 	$(CC) -o $@ $(CFLAGS) $(OBJECTS)
 clean:
-	$(RM) *.o vcs-svn/*.o svn-fe
+	$(RM) *.o vcs-svn/*.o contrib/svn-fe/*.o contrib/svn-fe/svn-fe
