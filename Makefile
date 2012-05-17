@@ -6,13 +6,10 @@ HEADERS = compat/mkgmtime.h \
 	vcs-svn/compat-util.h \
 	vcs-svn/fast_export.h \
 	vcs-svn/line_buffer.h \
-	vcs-svn/obj_pool.h \
 	vcs-svn/repo_tree.h \
 	vcs-svn/sliding_window.h \
-	vcs-svn/string_pool.h \
 	vcs-svn/svndiff.h \
-	vcs-svn/svndump.h \
-	vcs-svn/trp.h
+	vcs-svn/svndump.h
 
 OBJECTS = compat/mkgmtime.o \
 	compat/quote.o \
@@ -22,7 +19,6 @@ OBJECTS = compat/mkgmtime.o \
 	vcs-svn/line_buffer.o \
 	vcs-svn/repo_tree.o \
 	vcs-svn/sliding_window.o \
-	vcs-svn/string_pool.o \
 	vcs-svn/svndiff.o \
 	vcs-svn/svndump.o
 
