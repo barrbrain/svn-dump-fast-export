@@ -30,10 +30,10 @@
 		exit(128); \
 	} while (0)
 
-#define maximum_signed_value_of_type(b) \
-	(INTMAX_MAX >> (8 * (sizeof(intmax_t) - sizeof(b))))
+#define maximum_signed_value_of_type(a) \
+	(INTMAX_MAX >> (8 * (sizeof(intmax_t) - sizeof(a))))
 #define signed_add_overflows(a, b) \
-	((a) > maximum_signed_value_of_type(b) - (b))
+	((b) > maximum_signed_value_of_type(a) - (a))
 #define unsigned_add_overflows(a, b) ((a) + (b) < (a))
 
 /* rate of growth taken from git. */
