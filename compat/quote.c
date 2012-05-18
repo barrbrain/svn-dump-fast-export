@@ -13,7 +13,7 @@
 #include "quote.h"
 #include "strbuf.h"
 
-int quote_path_fully = 1;
+static int quote_path_fully = 1;
 
 /* 1 means: quote as octal
  * 0 means: quote as octal if (quote_path_fully)

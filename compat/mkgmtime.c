@@ -91,9 +91,7 @@
 #define WRONG (-1)
 #endif /* !defined WRONG */
 
-static int tmcomp(atmp, btmp)
-register const struct tm *const atmp;
-register const struct tm *const btmp;
+static int tmcomp(const struct tm *const atmp, const struct tm *const btmp)
 {
 	register int result;
 
@@ -106,7 +104,7 @@ register const struct tm *const btmp;
 	return result;
 }
 
-time_t mkgmtime(tmp) struct tm *const tmp;
+time_t mkgmtime(struct tm *const tmp)
 {
 	register int dir;
 	register int bits;
