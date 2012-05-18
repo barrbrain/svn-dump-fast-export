@@ -208,7 +208,7 @@ static long apply_delta(off_t len, struct line_buffer *input,
 		die("cannot apply delta");
 	if (old_data) {
 		/* Read the remainder of preimage and trailing newline. */
-		assert(!signed_add_overflows(preimage.max_off, 1));
+		assert(!signed_add_overflows(preimage.max_off, (off_t) 1));
 		preimage.max_off++;	/* room for newline */
 		if (move_window(&preimage, preimage.max_off - 1, 1))
 			die("cannot seek to end of input");
