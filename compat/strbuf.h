@@ -72,6 +72,7 @@ static inline void strbuf_setlen(struct strbuf *sb, size_t len) {
 	if (!sb->alloc)
 		strbuf_grow(sb, 0);
 	assert(len < sb->alloc);
+	assert(sb->buf);
 	sb->len = len;
 	sb->buf[len] = '\0';
 }
