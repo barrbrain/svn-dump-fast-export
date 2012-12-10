@@ -1,5 +1,9 @@
 .PHONY: all clean
 CFLAGS = -Wall -W -g -O2 -Icompat -Ivcs-svn
+LIBGIT2_PATH ?= $(HOME)/dev/libgit2
+CFLAGS += -I$(LIBGIT2_PATH)/include
+LDFLAGS += -L$(LIBGIT2_PATH) -lgit2
+
 HEADERS = compat/mkgmtime.h \
 	compat/quote.h \
 	compat/strbuf.h \
@@ -26,7 +30,7 @@ all: contrib/svn-fe/svn-fe
 %.o: %.c $(HEADERS)
 	$(CC) -o $@ $(CFLAGS) -c $<
 contrib/svn-fe/svn-fe: $(OBJECTS)
-	$(CC) -o $@ $(CFLAGS) $(OBJECTS)
+	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) $(OBJECTS)
 clean:
 	$(RM) compat/*.o vcs-svn/*.o \
 	contrib/svn-fe/*.o contrib/svn-fe/svn-fe
