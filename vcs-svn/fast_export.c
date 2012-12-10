@@ -17,7 +17,6 @@
 
 static uint32_t first_commit_done;
 static struct line_buffer postimage = LINE_BUFFER_INIT;
-static struct line_buffer report_buffer = LINE_BUFFER_INIT;
 
 /* NEEDSWORK: move to fast_export_init() */
 static int init_postimage(void)
@@ -32,14 +31,10 @@ static int init_postimage(void)
 void fast_export_init(int fd)
 {
 	first_commit_done = 0;
-	if (buffer_fdinit(&report_buffer, fd))
-		die_errno("cannot read from file descriptor %d", fd);
 }
 
 void fast_export_deinit(void)
 {
-	if (buffer_deinit(&report_buffer))
-		die_errno("error closing fast-import feedback stream");
 }
 
 void fast_export_delete(const char *path)
@@ -124,54 +119,11 @@ static void ls_from_active_commit(const char *path)
 	fflush(stdout);
 }
 
-static const char *get_response_line(void)
-{
-	const char *line = buffer_read_line(&report_buffer);
-	if (line)
-		return line;
-	if (buffer_ferror(&report_buffer))
-		die_errno("error reading from fast-import");
-	die("unexpected end of fast-import feedback");
-}
-
 static void die_short_read(struct line_buffer *input)
 {
 	if (buffer_ferror(input))
 		die_errno("error reading dump file");
 	die("invalid dump: unexpected end of file");
-}
-
-static int ends_with(const char *s, size_t len, const char *suffix)
-{
-	const size_t suffixlen = strlen(suffix);
-	if (len < suffixlen)
-		return 0;
-	return !memcmp(s + len - suffixlen, suffix, suffixlen);
-}
-
-static int parse_cat_response_line(const char *header, off_t *len)
-{
-	size_t headerlen = strlen(header);
-	uintmax_t n;
-	const char *type;
-	const char *end;
-
-	if (ends_with(header, headerlen, " missing"))
-		return error("cat-blob reports missing blob: %s", header);
-	type = strstr(header, " blob ");
-	if (!type)
-		return error("cat-blob header has wrong object type: %s", header);
-	n = strtoumax(type + strlen(" blob "), (char **) &end, 10);
-	if (end == type + strlen(" blob "))
-		return error("cat-blob header does not contain length: %s", header);
-	if (memchr(type + strlen(" blob "), '-', end - type - strlen(" blob ")))
-		return error("cat-blob header contains negative length: %s", header);
-	if (n == UINTMAX_MAX || n > maximum_signed_value_of_type(off_t))
-		return error("blob too large for current definition of off_t");
-	*len = n;
-	if (*end)
-		return error("cat-blob header contains garbage after length: %s", header);
-	return 0;
 }
 
 static void check_preimage_overflow(off_t a, off_t b)
@@ -184,18 +136,14 @@ static long apply_delta(off_t len, struct line_buffer *input,
 			const char *old_data, uint32_t old_mode)
 {
 	long ret;
-	struct sliding_view preimage = SLIDING_VIEW_INIT(&report_buffer, 0);
+	struct sliding_view preimage;
 	FILE *out;
 
 	if (init_postimage() || !(out = buffer_tmpfile_rewind(&postimage)))
 		die("cannot open temporary file for blob retrieval");
 	if (old_data) {
-		const char *response;
 		printf("cat-blob %s\n", old_data);
 		fflush(stdout);
-		response = get_response_line();
-		if (parse_cat_response_line(response, &preimage.max_off))
-			die("invalid cat-blob response: %s", response);
 		check_preimage_overflow(preimage.max_off, 1);
 	}
 	if (old_mode == REPO_MODE_LNK) {
@@ -239,58 +187,17 @@ void fast_export_data(uint32_t mode, off_t len, struct line_buffer *input)
 	fputc('\n', stdout);
 }
 
-static int parse_ls_response(const char *response, uint32_t *mode,
-					struct strbuf *dataref)
-{
-	const char *tab;
-	const char *response_end;
-
-	assert(response);
-	response_end = response + strlen(response);
-
-	if (*response == 'm') {	/* Missing. */
-		errno = ENOENT;
-		return -1;
-	}
-
-	/* Mode. */
-	if (response_end - response < (signed) strlen("100644") ||
-	    response[strlen("100644")] != ' ')
-		die("invalid ls response: missing mode: %s", response);
-	*mode = 0;
-	for (; *response != ' '; response++) {
-		char ch = *response;
-		if (ch < '0' || ch > '7')
-			die("invalid ls response: mode is not octal: %s", response);
-		*mode *= 8;
-		*mode += ch - '0';
-	}
-
-	/* ' blob ' or ' tree ' */
-	if (response_end - response < (signed) strlen(" blob ") ||
-	    (response[1] != 'b' && response[1] != 't'))
-		die("unexpected ls response: not a tree or blob: %s", response);
-	response += strlen(" blob ");
-
-	/* Dataref. */
-	tab = memchr(response, '\t', response_end - response);
-	if (!tab)
-		die("invalid ls response: missing tab: %s", response);
-	strbuf_add(dataref, response, tab - response);
-	return 0;
-}
-
 int fast_export_ls_rev(uint32_t rev, const char *path,
 				uint32_t *mode, struct strbuf *dataref)
 {
 	ls_from_rev(rev, path);
-	return parse_ls_response(get_response_line(), mode, dataref);
+	return 0;
 }
 
 int fast_export_ls(const char *path, uint32_t *mode, struct strbuf *dataref)
 {
 	ls_from_active_commit(path);
-	return parse_ls_response(get_response_line(), mode, dataref);
+	return 0;
 }
 
 void fast_export_blob_delta(uint32_t mode,
