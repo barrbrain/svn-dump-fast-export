@@ -11,6 +11,7 @@
 #include <ctype.h>
 
 #include "compat-util.h"
+#include "git2.h"
 #include "repo_tree.h"
 #include "fast_export.h"
 #include "line_buffer.h"
@@ -23,8 +24,6 @@
  * must be guarded by length test.
  */
 #define constcmp(s, ref) memcmp(s, ref, sizeof(ref) - 1)
-
-#define REPORT_FILENO 3
 
 #define NODEACT_REPLACE 4
 #define NODEACT_DELETE 3
@@ -477,9 +476,15 @@ void svndump_read(const char *url)
 
 int svndump_init(const char *filename)
 {
+	int error;
+	git_repository *repo;
+	if ((error = git_repository_open(&repo, "")) < 0) {
+		const git_error *err = giterr_last();
+		return error("cannot open %s: %s", "", err ? err->message : "");
+	}
 	if (buffer_init(&input, filename))
 		return error("cannot open %s: %s", filename, strerror(errno));
-	fast_export_init(REPORT_FILENO);
+	fast_export_init(repo);
 	strbuf_init(&dump_ctx.uuid, 4096);
 	strbuf_init(&dump_ctx.url, 4096);
 	strbuf_init(&rev_ctx.log, 4096);

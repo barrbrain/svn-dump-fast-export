@@ -4,6 +4,7 @@
  */
 
 #include "compat-util.h"
+#include "git2.h"
 #include "strbuf.h"
 #include "quote.h"
 #include "fast_export.h"
@@ -17,6 +18,7 @@
 
 static uint32_t first_commit_done;
 static struct line_buffer postimage = LINE_BUFFER_INIT;
+static git_odb *odb;
 
 /* NEEDSWORK: move to fast_export_init() */
 static int init_postimage(void)
@@ -28,13 +30,16 @@ static int init_postimage(void)
 	return buffer_tmpfile_init(&postimage);
 }
 
-void fast_export_init(int fd)
+void fast_export_init(git_repository *repo)
 {
 	first_commit_done = 0;
+	git_repository_odb(&odb, repo);
 }
 
 void fast_export_deinit(void)
 {
+	git_odb_free(odb);
+	odb = NULL;
 }
 
 void fast_export_delete(const char *path)

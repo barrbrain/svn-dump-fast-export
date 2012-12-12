@@ -4,7 +4,7 @@
 struct strbuf;
 struct line_buffer;
 
-void fast_export_init(int fd);
+void fast_export_init(git_repository *repo);
 void fast_export_deinit(void);
 
 void fast_export_delete(const char *path);

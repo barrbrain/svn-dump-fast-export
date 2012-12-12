@@ -4,6 +4,7 @@
  */
 
 #include "compat-util.h"
+#include "git2.h"
 #include "strbuf.h"
 #include "repo_tree.h"
 #include "fast_export.h"
