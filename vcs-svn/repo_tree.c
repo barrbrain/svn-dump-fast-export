@@ -9,10 +9,11 @@
 #include "repo_tree.h"
 #include "fast_export.h"
 
-const char *repo_read_path(const char *path, uint32_t *mode_out)
+const git_oid *repo_read_path(const char *path, uint32_t *mode_out)
 {
 	int err;
 	static struct strbuf buf = STRBUF_INIT;
+	git_oid oid;
 
 	strbuf_reset(&buf);
 	err = fast_export_ls(path, mode_out, &buf);
@@ -23,7 +24,9 @@ const char *repo_read_path(const char *path, uint32_t *mode_out)
 		*mode_out = REPO_MODE_DIR;
 		return NULL;
 	}
-	return buf.buf;
+	git_oid_fromstr(&oid, buf.buf);
+	git_oid_cpy((git_oid *)(buf.buf), &oid);
+	return (const git_oid *)(buf.buf);
 }
 
 void repo_copy(uint32_t revision, const char *src, const char *dst)
@@ -31,6 +34,7 @@ void repo_copy(uint32_t revision, const char *src, const char *dst)
 	int err;
 	uint32_t mode;
 	static struct strbuf data = STRBUF_INIT;
+	git_oid oid;
 
 	strbuf_reset(&data);
 	err = fast_export_ls_rev(revision, src, &mode, &data);
@@ -40,7 +44,8 @@ void repo_copy(uint32_t revision, const char *src, const char *dst)
 		fast_export_delete(dst);
 		return;
 	}
-	fast_export_modify(dst, mode, data.buf);
+	git_oid_fromstr(&oid, data.buf);
+	fast_export_modify(dst, mode, &oid);
 }
 
 void repo_delete(const char *path)

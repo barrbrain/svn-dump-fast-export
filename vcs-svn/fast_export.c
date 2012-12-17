@@ -56,7 +56,7 @@ static void fast_export_truncate(git_oid *oid)
 	git_blob_create_frombuffer(oid, repo, "", 0);
 }
 
-void fast_export_modify(const char *path, uint32_t mode, const char *dataref)
+void fast_export_modify(const char *path, uint32_t mode, const git_oid *dataref)
 {
 	git_index_entry entry;
 	memset(&entry, 0, sizeof(entry));
@@ -64,7 +64,7 @@ void fast_export_modify(const char *path, uint32_t mode, const char *dataref)
 	if (!dataref)
 		fast_export_truncate(&entry.oid);
 	else
-		git_oid_fromstr(&entry.oid, dataref);
+		git_oid_cpy(&entry.oid, dataref);
 	entry.mode = mode;
 	entry.path = (char *)path;
 	git_index_add(index, &entry);
@@ -167,7 +167,7 @@ static void check_preimage_overflow(off_t a, off_t b)
 }
 
 static long apply_delta(off_t len, struct line_buffer *input,
-			const char *old_data, uint32_t old_mode)
+			const git_oid *old_data, uint32_t old_mode)
 {
 	long ret;
 	struct line_buffer preimage_buffer = LINE_BUFFER_INIT;
@@ -178,9 +178,7 @@ static long apply_delta(off_t len, struct line_buffer *input,
 	if (init_postimage() || !(out = buffer_tmpfile_rewind(&postimage)))
 		die("cannot open temporary file for blob retrieval");
 	if (old_data) {
-		git_oid old_oid;
-		git_oid_fromstr(&old_oid, old_data);
-		git_blob_lookup(&old_blob, repo, &old_oid);
+		git_blob_lookup(&old_blob, repo, old_data);
 		preimage_buffer.infile =
 			fmemopen(git_blob_rawcontent(old_blob),
 				 git_blob_rawsize(old_blob),
@@ -226,9 +224,8 @@ static int line_buffer_cb(char *content, size_t max_length, void *payload)
 	return ret;
 }
 
-void fast_export_data(uint32_t mode, off_t len, struct line_buffer *input)
+void fast_export_data(git_oid *oid, uint32_t mode, off_t len, struct line_buffer *input)
 {
-	git_oid oid;
 	struct line_buffer_limit payload = { input, len };
 	assert(len >= 0);
 	if (mode == REPO_MODE_LNK) {
@@ -239,7 +236,7 @@ void fast_export_data(uint32_t mode, off_t len, struct line_buffer *input)
 		if (buffer_skip_bytes(input, 5) != 5)
 			die_short_read(input);
 	}
-	git_blob_create_fromchunks(&oid, repo, NULL, &line_buffer_cb, &payload);
+	git_blob_create_fromchunks(oid, repo, NULL, &line_buffer_cb, &payload);
 }
 
 int fast_export_ls_rev(uint32_t rev, const char *path,
@@ -255,11 +252,10 @@ int fast_export_ls(const char *path, uint32_t *mode, struct strbuf *dataref)
 	return 0;
 }
 
-void fast_export_blob_delta(uint32_t mode,
-				uint32_t old_mode, const char *old_data,
+void fast_export_blob_delta(git_oid *oid, uint32_t mode,
+				uint32_t old_mode, const git_oid *old_data,
 				off_t len, struct line_buffer *input)
 {
-	git_oid oid;
 	struct line_buffer_limit payload = { &postimage, 0 };
 	long postimage_len;
 
@@ -270,5 +266,5 @@ void fast_export_blob_delta(uint32_t mode,
 		postimage_len -= strlen("link ");
 	}
 	payload.remaining = postimage_len;
-	git_blob_create_fromchunks(&oid, repo, NULL, &line_buffer_cb, &payload);
+	git_blob_create_fromchunks(oid, repo, NULL, &line_buffer_cb, &payload);
 }

@@ -222,9 +222,10 @@ static void handle_node(void)
 	 *  empty_blob	- empty
 	 *  "<dataref>"	- data retrievable from fast-import
 	 */
-	static const char *const empty_blob = "::empty::";
-	const char *old_data = NULL;
+	static const git_oid empty_blob;
+	const git_oid *old_data = NULL;
 	uint32_t old_mode = REPO_MODE_BLB;
+	git_oid oid;
 
 	if (node_ctx.action == NODEACT_DELETE) {
 		if (have_text || have_props || node_ctx.srcRev)
@@ -265,7 +266,7 @@ static void handle_node(void)
 		if (type == REPO_MODE_DIR)
 			old_data = NULL;
 		else if (have_text)
-			old_data = empty_blob;
+			old_data = &empty_blob;
 		else
 			die("invalid dump: adds node without text");
 	} else {
@@ -288,7 +289,7 @@ static void handle_node(void)
 	if (type == REPO_MODE_DIR)	/* directories are not tracked. */
 		return;
 	assert(old_data);
-	if (old_data == empty_blob)
+	if (old_data == &empty_blob)
 		/* For the fast_export_* functions, NULL means empty. */
 		old_data = NULL;
 	if (!have_text) {
@@ -296,13 +297,13 @@ static void handle_node(void)
 		return;
 	}
 	if (!node_ctx.text_delta) {
-		fast_export_modify(node_ctx.dst.buf, node_ctx.type, "inline");
-		fast_export_data(node_ctx.type, node_ctx.text_length, &input);
+		fast_export_data(&oid, node_ctx.type, node_ctx.text_length, &input);
+		fast_export_modify(node_ctx.dst.buf, node_ctx.type, &oid);
 		return;
 	}
-	fast_export_modify(node_ctx.dst.buf, node_ctx.type, "inline");
-	fast_export_blob_delta(node_ctx.type, old_mode, old_data,
+	fast_export_blob_delta(&oid, node_ctx.type, old_mode, old_data,
 				node_ctx.text_length, &input);
+	fast_export_modify(node_ctx.dst.buf, node_ctx.type, &oid);
 }
 
 static void begin_revision(void)
