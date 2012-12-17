@@ -170,14 +170,22 @@ static long apply_delta(off_t len, struct line_buffer *input,
 			const char *old_data, uint32_t old_mode)
 {
 	long ret;
-	struct sliding_view preimage;
+	struct line_buffer preimage_buffer = LINE_BUFFER_INIT;
+	struct sliding_view preimage = SLIDING_VIEW_INIT(&preimage_buffer, 0);
 	FILE *out;
+	git_blob *old_blob = NULL;
 
 	if (init_postimage() || !(out = buffer_tmpfile_rewind(&postimage)))
 		die("cannot open temporary file for blob retrieval");
 	if (old_data) {
-		printf("cat-blob %s\n", old_data);
-		fflush(stdout);
+		git_oid old_oid;
+		git_oid_fromstr(&old_oid, old_data);
+		git_blob_lookup(&old_blob, repo, &old_oid);
+		preimage_buffer.infile =
+			fmemopen(git_blob_rawcontent(old_blob),
+				 git_blob_rawsize(old_blob),
+				 "r");
+		preimage.max_off = git_blob_rawsize(old_blob);
 		check_preimage_overflow(preimage.max_off, 1);
 	}
 	if (old_mode == REPO_MODE_LNK) {
@@ -189,13 +197,7 @@ static long apply_delta(off_t len, struct line_buffer *input,
 	if (svndiff0_apply(input, len, &preimage, out))
 		die("cannot apply delta");
 	if (old_data) {
-		/* Read the remainder of preimage and trailing newline. */
-		assert(!signed_add_overflows(preimage.max_off, 1));
-		preimage.max_off++;	/* room for newline */
-		if (move_window(&preimage, preimage.max_off - 1, 1))
-			die("cannot seek to end of input");
-		if (preimage.buf.buf[0] != '\n')
-			die("missing newline after cat-blob response");
+		git_blob_free(old_blob);
 	}
 	ret = buffer_tmpfile_prepare_to_read(&postimage);
 	if (ret < 0)

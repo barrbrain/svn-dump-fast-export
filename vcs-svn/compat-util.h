@@ -16,6 +16,10 @@
 #include <inttypes.h>
 #include <errno.h>
 
+#if defined( __APPLE__ )
+#include "fmemopen.h"
+#endif
+
 #define error(...) (fprintf(stderr, "error: " __VA_ARGS__), -1)
 #define warning(...) (fprintf(stderr, "warning: " __VA_ARGS__), -1)
 #define die(...) \
