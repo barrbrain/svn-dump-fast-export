@@ -9,6 +9,7 @@
 
 #include <time.h>
 #include <ctype.h>
+#include <unistd.h>
 
 #include "compat-util.h"
 #include "git2.h"
@@ -479,7 +480,7 @@ int svndump_init(const char *filename)
 {
 	int error;
 	git_repository *repo;
-	if ((error = git_repository_open(&repo, "")) < 0) {
+	if ((error = git_repository_open(&repo, getcwd(NULL, 0))) < 0) {
 		const git_error *err = giterr_last();
 		return error("cannot open %s: %s", "", err ? err->message : "");
 	}
