@@ -7,6 +7,7 @@ LDFLAGS += $(shell find $(LIBGIT2_PATH)/CMakeFiles/git2.dir -name \*.o) -lcrypto
 HEADERS = compat/mkgmtime.h \
 	compat/quote.h \
 	compat/strbuf.h \
+	compat/fmemopen.h \
 	vcs-svn/compat-util.h \
 	vcs-svn/fast_export.h \
 	vcs-svn/line_buffer.h \
@@ -18,6 +19,7 @@ HEADERS = compat/mkgmtime.h \
 OBJECTS = compat/mkgmtime.o \
 	compat/quote.o \
 	compat/strbuf.o \
+	compat/fmemopen.o \
 	contrib/svn-fe/svn-fe.o \
 	vcs-svn/fast_export.o \
 	vcs-svn/line_buffer.o \
