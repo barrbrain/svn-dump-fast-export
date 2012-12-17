@@ -135,24 +135,6 @@ void fast_export_end_commit(uint32_t revision)
 	printf("progress Imported commit %"PRIu32".\n\n", revision);
 }
 
-static void ls_from_rev(uint32_t rev, const char *path)
-{
-	/* ls :5 path/to/old/file */
-	printf("ls :%"PRIu32" ", rev);
-	quote_c_style(path, NULL, stdout, 0);
-	putchar('\n');
-	fflush(stdout);
-}
-
-static void ls_from_active_commit(const char *path)
-{
-	/* ls "path/to/file" */
-	printf("ls \"");
-	quote_c_style(path, NULL, stdout, 1);
-	printf("\"\n");
-	fflush(stdout);
-}
-
 static void die_short_read(struct line_buffer *input)
 {
 	if (buffer_ferror(input))
@@ -240,15 +222,28 @@ void fast_export_data(git_oid *oid, uint32_t mode, off_t len, struct line_buffer
 }
 
 int fast_export_ls_rev(uint32_t rev, const char *path,
-				uint32_t *mode, struct strbuf *dataref)
+				uint32_t *mode, git_oid *dataref_out)
 {
-	ls_from_rev(rev, path);
+	/* TODO: read mark map */
+	const git_index_entry *entry = git_index_get_bypath(index, path, 0);
+	if (!entry) {
+		errno = ENOENT;
+		return -1;
+	}
+	*mode = entry->mode;
+	git_oid_cpy(dataref_out, &entry->oid);
 	return 0;
 }
 
-int fast_export_ls(const char *path, uint32_t *mode, struct strbuf *dataref)
+int fast_export_ls(const char *path, uint32_t *mode, git_oid *dataref_out)
 {
-	ls_from_active_commit(path);
+	const git_index_entry *entry = git_index_get_bypath(index, path, 0);
+	if (!entry) {
+		errno = ENOENT;
+		return -1;
+	}
+	*mode = entry->mode;
+	git_oid_cpy(dataref_out, &entry->oid);
 	return 0;
 }
 

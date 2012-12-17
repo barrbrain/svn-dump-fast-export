@@ -20,8 +20,8 @@ void fast_export_blob_delta(git_oid *oid, uint32_t mode,
 
 /* If there is no such file at that rev, returns -1, errno == ENOENT. */
 int fast_export_ls_rev(uint32_t rev, const char *path,
-			uint32_t *mode_out, struct strbuf *dataref_out);
+			uint32_t *mode_out, git_oid *dataref_out);
 int fast_export_ls(const char *path,
-			uint32_t *mode_out, struct strbuf *dataref_out);
+			uint32_t *mode_out, git_oid *dataref_out);
 
 #endif
