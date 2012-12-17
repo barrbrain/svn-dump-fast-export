@@ -19,6 +19,8 @@
 static uint32_t first_commit_done;
 static struct line_buffer postimage = LINE_BUFFER_INIT;
 static git_odb *odb;
+static git_repository *repo;
+static git_index *index;
 
 /* NEEDSWORK: move to fast_export_init() */
 static int init_postimage(void)
@@ -30,10 +32,12 @@ static int init_postimage(void)
 	return buffer_tmpfile_init(&postimage);
 }
 
-void fast_export_init(git_repository *repo)
+void fast_export_init(git_repository *repo_in)
 {
 	first_commit_done = 0;
+	repo = repo_in;
 	git_repository_odb(&odb, repo);
+	git_index_new(&index);
 }
 
 void fast_export_deinit(void)
@@ -44,65 +48,90 @@ void fast_export_deinit(void)
 
 void fast_export_delete(const char *path)
 {
-	putchar('D');
-	putchar(' ');
-	quote_c_style(path, NULL, stdout, 0);
-	putchar('\n');
+	git_index_remove(index, path, 0);
 }
 
-static void fast_export_truncate(const char *path, uint32_t mode)
+static void fast_export_truncate(git_oid *oid)
 {
-	fast_export_modify(path, mode, "inline");
-	printf("data 0\n\n");
+	git_blob_create_frombuffer(oid, repo, "", 0);
 }
 
 void fast_export_modify(const char *path, uint32_t mode, const char *dataref)
 {
+	git_index_entry entry;
+	memset(&entry, 0, sizeof(entry));
 	/* Mode must be 100644, 100755, 120000, or 160000. */
-	if (!dataref) {
-		fast_export_truncate(path, mode);
-		return;
-	}
-	printf("M %06"PRIo32" %s ", mode, dataref);
-	quote_c_style(path, NULL, stdout, 0);
-	putchar('\n');
+	if (!dataref)
+		fast_export_truncate(&entry.oid);
+	else
+		git_oid_fromstr(&entry.oid, dataref);
+	entry.mode = mode;
+	entry.path = (char *)path;
+	git_index_add(index, &entry);
 }
 
-static char gitsvnline[MAX_GITSVN_LINE_LEN];
+static struct {
+	int mark;
+	char *ref;
+	git_signature author;
+	git_signature committer;
+	char *message;
+	int has_parent;
+	git_commit *parent;
+} commit;
 void fast_export_begin_commit(uint32_t revision, const char *author,
 			const struct strbuf *log,
 			const char *uuid, const char *url,
 			unsigned long timestamp)
 {
 	static const struct strbuf empty = STRBUF_INIT;
+	char *gitsvnline;
 	if (!log)
 		log = &empty;
 	if (*uuid && *url) {
-		snprintf(gitsvnline, MAX_GITSVN_LINE_LEN,
+		asprintf(&gitsvnline,
 				"\n\ngit-svn-id: %s@%"PRIu32" %s\n",
 				 url, revision, uuid);
 	} else {
-		*gitsvnline = '\0';
+		gitsvnline = NULL;
 	}
-	printf("commit refs/heads/master\n");
-	printf("mark :%"PRIu32"\n", revision);
-	printf("committer %s <%s@%s> %ld +0000\n",
-		   *author ? author : "nobody",
-		   *author ? author : "nobody",
-		   *uuid ? uuid : "local", timestamp);
-	printf("data %"PRIuMAX"\n",
-		(uintmax_t) (log->len + strlen(gitsvnline)));
-	fwrite(log->buf, log->len, 1, stdout);
-	printf("%s\n", gitsvnline);
+	commit.ref = "refs/heads/master";
+	commit.mark = revision;
+	asprintf(&commit.committer.name, "%s",
+		 *author ? author : "nobody");
+	asprintf(&commit.committer.email, "%s@%s",
+		 *author ? author : "nobody",
+		 *uuid ? uuid : "local");
+	commit.committer.when.time = timestamp;
+	commit.committer.when.offset = 0;
+	commit.author = commit.committer;
+	asprintf(&commit.message, "%*s%s",
+		 (int)log->len, log->buf,
+		 gitsvnline ? gitsvnline : "");
+	commit.has_parent = revision > 1;
 	if (!first_commit_done) {
-		if (revision > 1)
-			printf("from :%"PRIu32"\n", revision - 1);
 		first_commit_done = 1;
 	}
 }
 
 void fast_export_end_commit(uint32_t revision)
 {
+	git_oid oid;
+	git_tree *tree;
+	git_index_write_tree_to(&oid, index, repo);
+	git_tree_lookup(&tree, repo, &oid);
+	git_commit_create(
+		&oid,
+		repo,
+		commit.ref,
+		&commit.author,
+		&commit.committer,
+		NULL,
+		commit.message,
+		tree,
+		commit.has_parent,
+		(const git_commit**)&commit.parent);
+	git_commit_lookup(&commit.parent, repo, &oid);
 	printf("progress Imported commit %"PRIu32".\n\n", revision);
 }
 
