@@ -206,8 +206,30 @@ static long apply_delta(off_t len, struct line_buffer *input,
 	return ret;
 }
 
+struct line_buffer_limit {
+	struct line_buffer *input;
+	off_t remaining;
+};
+
+static int line_buffer_cb(char *content, size_t max_length, void *payload)
+{
+	struct line_buffer_limit *stream = payload;
+	struct strbuf buffer = { max_length--, 0, content };
+	int ret;
+	if (!stream->remaining)
+		return 0;
+	if (stream->remaining < (off_t) max_length)
+		max_length = stream->remaining;
+	ret = buffer_read_binary(stream->input, &buffer, max_length);
+	if (ret > 0)
+		stream->remaining -= ret;
+	return ret;
+}
+
 void fast_export_data(uint32_t mode, off_t len, struct line_buffer *input)
 {
+	git_oid oid;
+	struct line_buffer_limit payload = { input, len };
 	assert(len >= 0);
 	if (mode == REPO_MODE_LNK) {
 		/* svn symlink blobs start with "link " */
@@ -217,10 +239,7 @@ void fast_export_data(uint32_t mode, off_t len, struct line_buffer *input)
 		if (buffer_skip_bytes(input, 5) != 5)
 			die_short_read(input);
 	}
-	printf("data %"PRIuMAX"\n", (uintmax_t) len);
-	if (buffer_copy_bytes(input, len) != len)
-		die_short_read(input);
-	fputc('\n', stdout);
+	git_blob_create_fromchunks(&oid, repo, NULL, &line_buffer_cb, &payload);
 }
 
 int fast_export_ls_rev(uint32_t rev, const char *path,
@@ -240,6 +259,8 @@ void fast_export_blob_delta(uint32_t mode,
 				uint32_t old_mode, const char *old_data,
 				off_t len, struct line_buffer *input)
 {
+	git_oid oid;
+	struct line_buffer_limit payload = { &postimage, 0 };
 	long postimage_len;
 
 	assert(len >= 0);
@@ -248,7 +269,6 @@ void fast_export_blob_delta(uint32_t mode,
 		buffer_skip_bytes(&postimage, strlen("link "));
 		postimage_len -= strlen("link ");
 	}
-	printf("data %ld\n", postimage_len);
-	buffer_copy_bytes(&postimage, postimage_len);
-	fputc('\n', stdout);
+	payload.remaining = postimage_len;
+	git_blob_create_fromchunks(&oid, repo, NULL, &line_buffer_cb, &payload);
 }
