@@ -21,6 +21,21 @@ static struct line_buffer postimage = LINE_BUFFER_INIT;
 static git_odb *odb;
 static git_repository *repo;
 static git_index *index;
+static struct strbuf marks = STRBUF_INIT;
+
+static void set_mark(int mark, git_oid *oid)
+{
+	assert(mark > 0 && oid);
+	strbuf_grow(&marks, mark * sizeof(git_oid));
+	git_oid_cpy((git_oid*)(marks.buf) + mark - 1, oid);
+}
+
+static void get_mark(int mark, git_oid *oid)
+{
+	assert(mark > 0 && oid);
+	if (marks.alloc > mark * sizeof(git_oid))
+		git_oid_cpy(oid, (git_oid*)(marks.buf) + mark - 1);
+}
 
 /* NEEDSWORK: move to fast_export_init() */
 static int init_postimage(void)
@@ -44,6 +59,7 @@ void fast_export_deinit(void)
 {
 	git_odb_free(odb);
 	odb = NULL;
+	strbuf_release(&marks);
 }
 
 void fast_export_delete(const char *path)
@@ -86,6 +102,7 @@ void fast_export_begin_commit(uint32_t revision, const char *author,
 {
 	static const struct strbuf empty = STRBUF_INIT;
 	char *gitsvnline;
+	git_oid parent;
 	if (!log)
 		log = &empty;
 	if (*uuid && *url) {
@@ -109,6 +126,10 @@ void fast_export_begin_commit(uint32_t revision, const char *author,
 		 (int)log->len, log->buf,
 		 gitsvnline ? gitsvnline : "");
 	commit.has_parent = revision > 1;
+	if (commit.has_parent) {
+		get_mark(revision - 1, &parent);
+		git_commit_lookup(&commit.parent, repo, &parent);
+	}
 	if (!first_commit_done) {
 		first_commit_done = 1;
 	}
@@ -131,7 +152,7 @@ void fast_export_end_commit(uint32_t revision)
 		tree,
 		commit.has_parent,
 		(const git_commit**)&commit.parent);
-	git_commit_lookup(&commit.parent, repo, &oid);
+	set_mark(commit.mark, &oid);
 	printf("progress Imported commit %"PRIu32".\n\n", revision);
 }
 
@@ -224,14 +245,24 @@ void fast_export_data(git_oid *oid, uint32_t mode, off_t len, struct line_buffer
 int fast_export_ls_rev(uint32_t rev, const char *path,
 				uint32_t *mode, git_oid *dataref_out)
 {
-	/* TODO: read mark map */
-	const git_index_entry *entry = git_index_get_bypath(index, path, 0);
-	if (!entry) {
+	git_oid oid;
+	git_commit *commit;
+	git_tree *root;
+	git_tree_entry *entry;
+	get_mark(rev, &oid);
+	git_commit_lookup(&commit, repo, &oid);
+	git_commit_tree(&root, commit);
+	if (git_tree_entry_bypath(&entry, root, path) < 0) {
+		git_tree_free(root);
+		git_commit_free(commit);
 		errno = ENOENT;
 		return -1;
 	}
-	*mode = entry->mode;
-	git_oid_cpy(dataref_out, &entry->oid);
+	*mode = git_tree_entry_filemode(entry);
+	git_oid_cpy(dataref_out, git_tree_entry_id(entry));
+	git_tree_entry_free(entry);
+	git_tree_free(root);
+	git_commit_free(commit);
 	return 0;
 }
 
