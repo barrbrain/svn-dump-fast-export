@@ -2,7 +2,7 @@
 CFLAGS = -Wall -W -g -O2 -Icompat -Ivcs-svn
 LIBGIT2_PATH ?= $(HOME)/dev/libgit2
 CFLAGS += -I$(LIBGIT2_PATH)/include
-LDFLAGS += -L$(LIBGIT2_PATH) -lgit2
+LDFLAGS += $(shell find $(LIBGIT2_PATH)/CMakeFiles/git2.dir -name \*.o) -lcrypto -lz -lssl
 
 HEADERS = compat/mkgmtime.h \
 	compat/quote.h \
