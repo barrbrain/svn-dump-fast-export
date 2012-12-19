@@ -9,12 +9,14 @@
 #define _POSIX_C_SOURCE 200809L
 #define _XOPEN_SOURCE 700
 #define _DARWIN_C_SOURCE
+#define _GNU_SOURCE
 #include <sys/types.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <inttypes.h>
 #include <errno.h>
+#include <time.h>
 
 #if defined( __APPLE__ )
 #include "fmemopen.h"
