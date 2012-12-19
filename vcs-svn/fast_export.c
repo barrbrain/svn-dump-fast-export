@@ -22,6 +22,7 @@ static git_odb *odb;
 static git_repository *repo;
 static git_index *fe_index;
 static struct strbuf marks = STRBUF_INIT;
+static struct strbuf paths = STRBUF_INIT;
 
 static void set_mark(int mark, git_oid *oid)
 {
@@ -60,6 +61,7 @@ void fast_export_deinit(void)
 	git_odb_free(odb);
 	odb = NULL;
 	strbuf_release(&marks);
+	strbuf_release(&paths);
 }
 
 void fast_export_delete(const char *path)
@@ -68,11 +70,14 @@ void fast_export_delete(const char *path)
 	if (!entry) {
 		size_t n = 0;
 		size_t path_len = strlen(path);
-		while ((entry = git_index_get_byindex(fe_index, n)))
-			if (!strncmp(path, entry->path, path_len) && entry->path[path_len] == '/')
-				git_index_remove(fe_index, entry->path, 0);
-			else
-				n++;
+		size_t npaths = 0;
+		while ((entry = git_index_get_byindex(fe_index, n++)))
+			if (!strncmp(path, entry->path, path_len) && entry->path[path_len] == '/') {
+				strbuf_grow(&paths, ++npaths * sizeof(char*));
+				((const char**)(paths.buf))[npaths - 1] = entry->path;
+			}
+		while (npaths--)
+			git_index_remove(fe_index, ((const char**)(paths.buf))[npaths], 0);
 		return;
 	}
 	git_index_remove(fe_index, path, 0);
