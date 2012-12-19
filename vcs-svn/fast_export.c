@@ -20,7 +20,7 @@ static uint32_t first_commit_done;
 static struct line_buffer postimage = LINE_BUFFER_INIT;
 static git_odb *odb;
 static git_repository *repo;
-static git_index *index;
+static git_index *fe_index;
 static struct strbuf marks = STRBUF_INIT;
 
 static void set_mark(int mark, git_oid *oid)
@@ -52,7 +52,7 @@ void fast_export_init(git_repository *repo_in)
 	first_commit_done = 0;
 	repo = repo_in;
 	git_repository_odb(&odb, repo);
-	git_index_new(&index);
+	git_index_new(&fe_index);
 }
 
 void fast_export_deinit(void)
@@ -64,7 +64,7 @@ void fast_export_deinit(void)
 
 void fast_export_delete(const char *path)
 {
-	git_index_remove(index, path, 0);
+	git_index_remove(fe_index, path, 0);
 }
 
 static void fast_export_truncate(git_oid *oid)
@@ -83,7 +83,7 @@ void fast_export_modify(const char *path, uint32_t mode, const git_oid *dataref)
 		git_oid_cpy(&entry.oid, dataref);
 	entry.mode = mode;
 	entry.path = (char *)path;
-	git_index_add(index, &entry);
+	git_index_add(fe_index, &entry);
 }
 
 static struct {
@@ -140,7 +140,7 @@ void fast_export_end_commit(uint32_t revision)
 	char ohex[40];
 	git_oid oid;
 	git_tree *tree;
-	git_index_write_tree_to(&oid, index, repo);
+	git_index_write_tree_to(&oid, fe_index, repo);
 	git_tree_lookup(&tree, repo, &oid);
 	git_commit_create(
 		&oid,
@@ -270,7 +270,7 @@ int fast_export_ls_rev(uint32_t rev, const char *path,
 
 int fast_export_ls(const char *path, uint32_t *mode, git_oid *dataref_out)
 {
-	const git_index_entry *entry = git_index_get_bypath(index, path, 0);
+	const git_index_entry *entry = git_index_get_bypath(fe_index, path, 0);
 	if (!entry) {
 		errno = ENOENT;
 		return -1;
