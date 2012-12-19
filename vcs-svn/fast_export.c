@@ -64,6 +64,17 @@ void fast_export_deinit(void)
 
 void fast_export_delete(const char *path)
 {
+	const git_index_entry *entry = git_index_get_bypath(fe_index, path, 0);
+	if (!entry) {
+		size_t n = 0;
+		size_t path_len = strlen(path);
+		while ((entry = git_index_get_byindex(fe_index, n)))
+			if (!strncmp(path, entry->path, path_len) && entry->path[path_len] == '/')
+				git_index_remove(fe_index, entry->path, 0);
+			else
+				n++;
+		return;
+	}
 	git_index_remove(fe_index, path, 0);
 }
 
