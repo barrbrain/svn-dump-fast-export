@@ -90,7 +90,25 @@ void fast_export_modify(const char *path, uint32_t mode, const git_oid *dataref)
 	/* Mode must be 100644, 100755, 120000, or 160000. */
 	if (!dataref)
 		fast_export_truncate(&entry.oid);
-	else
+	else if (mode == REPO_MODE_DIR) {
+		git_index *index;
+		git_tree *tree;
+		size_t n = 0;
+		const git_index_entry *subentry;
+		fast_export_delete(path);
+		git_index_new(&index);
+		git_tree_lookup(&tree, repo, dataref);
+		git_index_read_tree(index, tree);
+		git_tree_free(tree);
+		while ((subentry = git_index_get_byindex(index, n++))) {
+			entry = *subentry;
+			asprintf(&entry.path, "%s/%s", path, subentry->path);
+			git_index_add(fe_index, &entry);
+			free(entry.path);
+		}
+		git_index_free(index);
+		return;
+	} else
 		git_oid_cpy(&entry.oid, dataref);
 	entry.mode = mode;
 	entry.path = (char *)path;
