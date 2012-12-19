@@ -272,8 +272,21 @@ int fast_export_ls(const char *path, uint32_t *mode, git_oid *dataref_out)
 {
 	const git_index_entry *entry = git_index_get_bypath(fe_index, path, 0);
 	if (!entry) {
-		errno = ENOENT;
-		return -1;
+		git_oid oid;
+		git_tree *root;
+		git_tree_entry *entry;
+		git_index_write_tree_to(&oid, fe_index, repo);
+		git_tree_lookup(&root, repo, &oid);
+		if (git_tree_entry_bypath(&entry, root, path) < 0) {
+			git_tree_free(root);
+			errno = ENOENT;
+			return -1;
+		}
+		*mode = git_tree_entry_filemode(entry);
+		git_oid_cpy(dataref_out, git_tree_entry_id(entry));
+		git_tree_entry_free(entry);
+		git_tree_free(root);
+		return 0;
 	}
 	*mode = entry->mode;
 	git_oid_cpy(dataref_out, &entry->oid);
