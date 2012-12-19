@@ -137,6 +137,7 @@ void fast_export_begin_commit(uint32_t revision, const char *author,
 
 void fast_export_end_commit(uint32_t revision)
 {
+	char ohex[40];
 	git_oid oid;
 	git_tree *tree;
 	git_index_write_tree_to(&oid, index, repo);
@@ -153,7 +154,8 @@ void fast_export_end_commit(uint32_t revision)
 		commit.has_parent,
 		(const git_commit**)&commit.parent);
 	set_mark(commit.mark, &oid);
-	printf("progress Imported commit %"PRIu32".\n\n", revision);
+	git_oid_fmt(ohex, &oid);
+	printf("progress Imported commit %"PRIu32": %*s\n\n", revision, 40, ohex);
 }
 
 static void die_short_read(struct line_buffer *input)
