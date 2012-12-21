@@ -62,6 +62,10 @@ void fast_export_deinit(void)
 	odb = NULL;
 	strbuf_release(&marks);
 	strbuf_release(&paths);
+	git_index_free(fe_index);
+	fe_index = NULL;
+	git_repository_free(repo);
+	repo = NULL;
 }
 
 void fast_export_delete(const char *path)
@@ -128,7 +132,7 @@ static struct {
 	char *message;
 	int has_parent;
 	git_commit *parent;
-} commit;
+} commit = { 0 };
 void fast_export_begin_commit(uint32_t revision, const char *author,
 			const struct strbuf *log,
 			const char *uuid, const char *url,
@@ -159,9 +163,14 @@ void fast_export_begin_commit(uint32_t revision, const char *author,
 	asprintf(&commit.message, "%*s%s",
 		 (int)log->len, log->buf,
 		 gitsvnline ? gitsvnline : "");
+	free(gitsvnline);
 	commit.has_parent = revision > 1;
 	if (commit.has_parent) {
 		get_mark(revision - 1, &parent);
+		if (commit.parent) {
+			git_commit_free(commit.parent);
+			commit.parent = NULL;
+		}
 		git_commit_lookup(&commit.parent, repo, &parent);
 	}
 	if (!first_commit_done) {
@@ -187,6 +196,13 @@ void fast_export_end_commit(uint32_t revision)
 		tree,
 		commit.has_parent,
 		(const git_commit**)&commit.parent);
+	git_tree_free(tree);
+	free(commit.message);
+	commit.message = NULL;
+	free(commit.committer.name);
+	commit.author.name = commit.committer.name = NULL;
+	free(commit.committer.email);
+	commit.author.email = commit.committer.email = NULL;
 	set_mark(commit.mark, &oid);
 	git_oid_fmt(ohex, &oid);
 	printf("progress Imported commit %"PRIu32": %*s\n\n", revision, 40, ohex);
@@ -235,6 +251,10 @@ static long apply_delta(off_t len, struct line_buffer *input,
 		die("cannot apply delta");
 	if (old_data) {
 		git_blob_free(old_blob);
+		if (preimage_buffer.infile) {
+			fclose(preimage_buffer.infile);
+			preimage_buffer.infile = NULL;
+		}
 	}
 	ret = buffer_tmpfile_prepare_to_read(&postimage);
 	if (ret < 0)
