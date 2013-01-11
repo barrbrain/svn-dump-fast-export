@@ -7,9 +7,15 @@
 
 struct line_buffer {
 	char line_buffer[LINE_BUFFER_LEN];
-	FILE *infile;
+	size_t line_alloc, line_off;
+	void *stream;
+	int (*read)(void *stream, char *buffer, size_t len);
+	int (*write)(void *stream, const char *buffer, size_t len);
+	int (*close)(void *stream);
+	int (*error)(void *stream);
+	void (*free)(void *stream);
 };
-#define LINE_BUFFER_INIT { "", NULL }
+#define LINE_BUFFER_INIT { "", 0, 0, NULL, NULL, NULL, NULL, NULL, NULL }
 
 int buffer_init(struct line_buffer *buf, const char *filename);
 int buffer_fdinit(struct line_buffer *buf, int fd);
